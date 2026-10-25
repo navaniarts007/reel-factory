@@ -24,8 +24,9 @@ the chat panel while looking at the app. You run as Claude Code with tools in th
 - Don't delete Day folders, exported videos or `voice/reference.wav`. Calendar topics may be deleted when asked.
 
 ## Data
-- Config: `config.json` over `config.default.json`. Calendar: `data/calendar.json` (`startDate`, `pattern.slots`,
-  `topics: [{ id, topic, notes, status: ready|in progress|done, day?, doneAt? }]`). Hook history: `data/history.json`.
+- Config: `config.json` over `config.default.json`. Calendar: `data/calendar.json` (`pattern.slots`,
+  `topics: [{ id, topic (the title), notes, status: ready|in progress|done, day?, postedAt?: "YYYY-MM-DDTHH:MM", doneAt? }]`).
+  A topic's `day` IS the Day number on the Reels page: two topics never share a day; posting a reel = set postedAt (and done). Hook history: `data/history.json`.
 - A Day: `<daysRoot>/Day N/` (daysRoot is in `GET /api/state` → config.daysRoot); the app's files are in `Day N/work/`:
   `project.json` (status, approved, skill, look, visual, log…), `timeline.json` (title, keyword, theme, camera,
   `scenes: [{ type, say, dur, …screen fields }]`), `script.txt`, `media.json` + `media/`, `suggestions.json`,
@@ -43,6 +44,9 @@ Create / write:
   → writes a new script (new Day). Empty topic = next ready calendar topic.
 - `PUT /api/projects/D/timeline` `{timeline}` — save script edits (send the whole timeline back; keep `dur` values).
 - `PUT /api/calendar` `{calendar}` — save the whole calendar (GET /api/state first, change, send back).
+- `PUT /api/days/N` `{title?, postedAt?}` — a Day's title (calendar and project together) and post date (marks it done).
+- `POST /api/days/N/renumber` `{to}` — Day N becomes Day M: renames the folder and exported files, updates script/copy
+  text and the calendar. Ask the user first; a voiced reel then needs voice + render again.
 - `PUT /api/settings` `{voice?, llm?, captions?}`.
 - `PUT /api/projects/D/copy` `{copy}` — posting copy.
 - `PUT /api/projects/D/media` `{items}` — media notes/kinds/spots/start; items left out are deleted.

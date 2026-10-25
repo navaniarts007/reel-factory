@@ -20,6 +20,7 @@
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
   label { font-size:13px; color:var(--muted); display:block; margin:8px 0 4px; }
   input[type=text], textarea, select { width:100%; font:inherit; color:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  input[type=number], input[type=datetime-local] { font:inherit; color:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:10px; background:#fff; }
   textarea { resize:vertical; }
   textarea.mono { font:13px/1.45 Consolas, "Courier New", monospace; }
   button { font:inherit; font-weight:500; padding:8px 14px; border-radius:10px; border:1.5px solid var(--ink); background:#fff; color:var(--ink); cursor:pointer; }
@@ -70,6 +71,9 @@
   .cell.done { background:#F1F7F3; } .cell .d { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; }
   .cell .t { font-weight:500; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; cursor:pointer; }
   .cell .t.done { text-decoration:line-through; color:var(--muted); } .cell .slot { font-size:11px; color:var(--muted); }
+  .cell .ent { display:flex; flex-direction:column; gap:2px; } .cell .ent + .ent { border-top:1px dashed var(--line); padding-top:4px; margin-top:2px; }
+  .addrow { gap:8px; margin:0 0 12px; } .addrow input { margin:0; }
+  button.bad { color:var(--bad); border-color:#E6C2BF; } .day .posted { color:var(--ok); }
   .tick { width:18px; height:18px; accent-color:var(--ok); cursor:pointer; margin:0; }
   tr.done td { background:#F6FAF7; } tr.done input[type=text] { color:var(--muted); text-decoration:line-through; }
   /* versions: tick what to make */
@@ -185,6 +189,7 @@
   </div>
 </div></dialog>
 
+<dialog id="topicDlg" style="width:min(620px,94vw)"><div class="in" id="topicBody"></div></dialog>
 <dialog id="gvDlg" style="width:min(1180px,96vw)" onclose="pvStop()"><div class="in" id="gvBody"></div></dialog>
 
 <script>
@@ -235,8 +240,10 @@ async function loadState() {
   $("#chips").innerHTML = `<span class="chip ${STATE.setup.reference ? "ok" : "bad"}">${STATE.setup.reference ? "✓ Voice reference" : "✗ Record voice reference"}</span>
     <span class="chip">Script: ${STATE.config.llm.provider === "api" ? "API key" : "Claude Code"}</span>
     <span class="chip">Voice: ${esc(STATE.config.voice.model)} · ${esc(STATE.config.voice.device)}</span>`;
-  $("#days").innerHTML = STATE.projects.map(p => `<div class="day ${p.day === DAY ? "sel" : ""}" onclick="${p.status === "manual" ? "" : `select(${p.day})`}">
-    <b>Day ${p.day}</b><small>${esc(p.title || "")}</small><small>${esc(p.status)}</small></div>`).join("") || `<p class="muted">No days yet.</p>`;
+  $("#days").innerHTML = STATE.projects.map(p => { const t = STATE.calendar.topics.find(x => x.day === p.day);
+    return `<div class="day ${p.day === DAY ? "sel" : ""}" onclick="${p.status === "manual" ? `topicOpen({day:${p.day}})` : `select(${p.day})`}">
+    <b>Day ${p.day}</b><small>${esc(t?.topic || p.title || "")}</small>
+    <small>${t?.postedAt ? `<span class="posted">✓ posted ${esc(postedTime(t))}</span>` : esc(t?.status === "done" ? "done" : p.status === "manual" ? "made by hand" : p.status)}</small></div>`; }).join("") || `<p class="muted">No days yet.</p>`;
 }
 
 function skillRows() {
@@ -291,7 +298,9 @@ function render() {
   const tabs = [["script", "Script"], ["media", "Media"], ["voice", "Voice"], ["video", "Video"], ["copy", "Copy"], ["export", "Export"]];
   const keepScroll = $("#log")?.scrollTop;
   $("#panel").innerHTML = `
-    <div class="row"><h2 style="font-size:34px">Day ${p.day}: ${esc(p.title || p.topic)}</h2></div>
+    <div class="row"><h2 style="font-size:34px">Day ${p.day}: ${esc(p.title || p.topic)}</h2>
+      <button class="small" onclick="topicOpen({day:${p.day}})" title="Change the title, Day number or post date (same as in the calendar)">✎ Title, day, post date</button>
+      ${(t => t?.postedAt ? `<span class="chip ok">posted ${esc(postedTime(t))}</span>` : "")(STATE.calendar.topics.find(x => x.day === p.day))}</div>
     <div class="row muted" style="font-size:14px">${esc(p.topic)} · status <b>${esc(p.status)}</b>
       ${p.busy ? `<span class="busy">${esc(p.job?.current || "waiting")}…</span>${stopBtn()}` : ""}</div>
     ${p.error ? `<div class="note bad" style="margin-top:10px"><b>Last error:</b> ${esc(p.error)}</div>` : ""}
@@ -811,94 +820,200 @@ function go(page) {
   if (PAGE === "calendar") renderCalPage();
 }
 
-// ---------------- content calendar: Day N falls on startDate + N - 1. Made reels sit on their Day (calendarId link),
-// a topic pinned to a day sits there, the other open topics fill the next free days in queue order.
-const CAL = { view: "month", month: null, saveT: 0 };
+// ---------------- content calendar. One Day number links everything: a topic with "day": N is Day N on the Reels page too
+// (lib/calendar.js keeps the Day folders pointing at it). A posted Day sits on its post date; later Days are planned from
+// the latest dated Day (one a day, never before today). Open topics with no Day fill the next free numbers in queue order.
+const CAL = { view: "month", month: null, saveT: 0, edit: null };
 const cal = () => STATE.calendar;
 const dayMs = 864e5, ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const parseYmd = s => { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, m - 1, d); };
-function startDate() { return cal().startDate || STATE.day1Date || ymd(new Date()); }
-const dateOfDay = n => new Date(parseYmd(startDate()).getTime() + (n - 1) * dayMs);
-const dayOfDate = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - parseYmd(startDate())) / dayMs) + 1;
+const parseYmd = s => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
+const topicOfDay = n => cal().topics.find(t => t.day === n);
+const folderOf = n => STATE.projects.find(p => p.day === n);           // a Day folder (made in the app or by hand)
+const appDay = n => { const p = folderOf(n); return p && p.status !== "manual" ? p : null; };
+const postedTime = t => t?.postedAt ? new Date(t.postedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+function anchor() {
+  let a = null;
+  for (const t of cal().topics) if (t.day != null && (t.postedAt || t.date) && (!a || t.day > a.day)) a = t;
+  return a;
+}
+function dateOfDay(n) {
+  const t = topicOfDay(n);
+  if (t?.postedAt || t?.date) return parseYmd(t.postedAt || t.date);
+  const a = anchor(), today = parseYmd(ymd(new Date()));
+  if (!a) return new Date(today.getTime() + (n - STATE.nextDay) * dayMs);
+  if (n <= a.day) return null;                                          // an earlier Day that was never dated
+  const first = Math.max(parseYmd(a.postedAt || a.date).getTime() + dayMs, today.getTime());
+  return new Date(first + (n - a.day - 1) * dayMs);
+}
 function schedule() {
-  const byDay = {}, topics = cal().topics || [], made = {};
-  for (const p of STATE.projects) if (p.calendarId) made[p.calendarId] = p.day;
-  for (const t of topics) { const d = made[t.id] || t.day; if (d && !byDay[d]) byDay[d] = t; }
+  const byDay = {}, dayOf = {};
+  for (const t of cal().topics) if (t.day != null && !byDay[t.day]) { byDay[t.day] = t; dayOf[t.id] = t.day; }
   let n = STATE.nextDay;
-  for (const t of topics) {
-    if (made[t.id] || t.day || t.status === "done") continue;
-    while (byDay[n] || STATE.projects.some(p => p.day === n)) n++;
-    byDay[n] = t; n++;
+  for (const t of cal().topics) {
+    if (t.day != null || t.status === "done") continue;
+    while (byDay[n] || folderOf(n)) n++;
+    byDay[n] = t; dayOf[t.id] = n; n++;
   }
-  const dayOf = {}; for (const [d, t] of Object.entries(byDay)) dayOf[t.id] = +d;
-  return { byDay, dayOf, made };
+  return { byDay, dayOf };
 }
 function slotHint(n) { const s = cal().pattern?.slots || []; return s.length ? s[(n - 1 + s.length * 10) % s.length] : ""; }
-function saveCal(now) {
+async function saveCalNow() {
   clearTimeout(CAL.saveT);
-  CAL.saveT = setTimeout(async () => { await api("PUT", "/api/calendar", { calendar: cal() }); const st = await api("GET", "/api/state"); STATE.nextTopic = st.nextTopic; $("#nextTopic").innerHTML = STATE.nextTopic ? `Next from calendar: <b>${esc(STATE.nextTopic.topic)}</b>` : "Calendar is empty: type a topic."; }, now ? 0 : 500);
+  await api("PUT", "/api/calendar", { calendar: cal() });
+  await loadState(); if (DAY != null && appDay(DAY)) await refresh().catch(() => {});
 }
+function saveCal() { clearTimeout(CAL.saveT); CAL.saveT = setTimeout(saveCalNow, 500); }
 function tickTopic(id, on) {
-  const t = cal().topics.find(x => x.id === id), { made } = schedule();
-  t.status = on ? "done" : made[id] ? "in progress" : "ready";
-  if (on) t.doneAt = new Date().toISOString(); else delete t.doneAt;
-  saveCal(true); renderCalPage();
-}
-function topicEdit(id, field, v) {
   const t = cal().topics.find(x => x.id === id);
-  if (field === "day") { if (+v > 0) t.day = +v; else delete t.day; } else t[field] = v;
-  saveCal(); if (field === "day") renderCalPage();
+  t.status = on ? "done" : t.day != null && appDay(t.day) ? "in progress" : "ready";
+  if (on) t.doneAt = new Date().toISOString(); else delete t.doneAt;
+  saveCalNow().then(renderCalPage);
 }
 function topicMove(id, dir) {
   const a = cal().topics, i = a.findIndex(x => x.id === id), j = i + dir;
   if (j < 0 || j >= a.length) return;
-  [a[i], a[j]] = [a[j], a[i]]; saveCal(); renderCalPage();
+  [a[i], a[j]] = [a[j], a[i]]; saveCalNow().then(renderCalPage);
 }
-function topicDelete(id) {
+async function topicDelete(id) {
   const t = cal().topics.find(x => x.id === id);
-  if (!confirm(`Delete "${t.topic || "this topic"}" from the calendar?`)) return;
-  cal().topics = cal().topics.filter(x => x.id !== id); saveCal(true); renderCalPage();
+  if (!confirm(`Delete "${t.topic || "this topic"}" from the calendar?${t.day != null && folderOf(t.day) ? `\nThe Day ${t.day} folder and its video stay; only the calendar entry goes.` : ""}`)) return false;
+  cal().topics = cal().topics.filter(x => x.id !== id); await saveCalNow(); renderCalPage(); return true;
 }
-function topicAdd(day) {
-  const topic = prompt(day ? `Topic for Day ${day} (${dateOfDay(day).toDateString()}):` : "New topic:");
-  if (!topic || !topic.trim()) return;
-  cal().topics.push({ id: "t" + Date.now(), topic: topic.trim(), notes: "", status: "ready", ...(day ? { day } : {}) });
-  saveCal(true); renderCalPage();
+
+// Change a topic: title, description, Day number, post date, done. A Day that has a folder moves with it (renamed on disk).
+async function topicApply(t, ch) {
+  const isNew = !cal().topics.includes(t), old = t.day ?? null;
+  const day = ch.day === undefined ? old : ch.day === "" || ch.day == null ? null : +ch.day;
+  if (day != null && (!Number.isInteger(day) || day < 0)) { alert("The Day number must be 0 or more."); return false; }
+  const clash = day != null && day !== old && cal().topics.find(x => x !== t && x.day === day);
+  if (clash) { alert(`Day ${day} already has "${clash.topic}". Change or delete that one first.`); return false; }
+  const moveFolder = old != null && day !== old && folderOf(old);
+  if (moveFolder) {
+    if (day == null) { alert(`This topic is Day ${old}, which has a folder: it needs a Day number.`); return false; }
+    if (folderOf(day)) { alert(`A Day ${day} folder already exists. Pick a free number.`); return false; }
+    const voiced = appDay(old) ? (await api("GET", `/api/projects/${old}`).catch(() => null))?.done?.voice : null;
+    if (!confirm(`Change Day ${old} to Day ${day}?\n\nThe "Day ${old}" folder is renamed to "Day ${day}", and its script, copy and exported files say Day ${day}.` +
+      (voiced ? `\nIts voice says "Day ${old}": generate the voice again after this (only the hello and bye scenes are redone), then render.` : ""))) return false;
+  } else if (day !== old) t.day = day;
+  if (day == null) delete t.day;
+  if (typeof ch.topic === "string") t.topic = ch.topic.trim() || t.topic || "Untitled";
+  if (typeof ch.notes === "string") t.notes = ch.notes.trim();
+  if (ch.postedAt !== undefined) { if (ch.postedAt) t.postedAt = ch.postedAt.slice(0, 16); else delete t.postedAt; }
+  if (ch.done !== undefined || (ch.postedAt && t.status !== "done")) {
+    const on = ch.done ?? true;
+    t.status = on ? "done" : t.day != null && appDay(t.day) ? "in progress" : "ready";
+    if (on) t.doneAt = t.doneAt || new Date().toISOString(); else delete t.doneAt;
+  }
+  if (isNew) cal().topics.push(t);
+  await api("PUT", "/api/calendar", { calendar: cal() });
+  const n = moveFolder ? old : t.day;
+  if (typeof ch.topic === "string" && n != null && appDay(n)) await api("PUT", `/api/days/${n}`, { title: t.topic });   // same title on the Reels page
+  if (moveFolder) {
+    try { await api("POST", `/api/days/${old}/renumber`, { to: day }); }
+    catch (e) { alert(e.message); }
+    if (DAY === old) DAY = day;
+  }
+  await loadState(); if (DAY != null && appDay(DAY)) await refresh().catch(() => {});
+  return true;
 }
-function openDay(n) { go("reels"); select(n); }
-function calCell(d, inMonth) {
-  const n = dayOfDate(d), { byDay } = schedule(), t = n >= 1 ? byDay[n] : null, today = ymd(d) === ymd(new Date());
-  const proj = n >= 1 ? STATE.projects.find(p => p.day === n) : null, done = t?.status === "done";
-  return `<div class="cell ${inMonth ? "" : "out"} ${today ? "today" : ""} ${done ? "done" : ""}">
-    <div class="d"><span><b style="color:var(--ink)">${d.getDate()}</b>${n >= 1 ? ` · Day ${n}` : ""}</span>
+function topicField(id, field, v) { topicApply(cal().topics.find(x => x.id === id), { [field]: v }).then(renderCalPage); }
+
+// The edit dialog, from the calendar or the Reels page: a topic (by id), a Day (by number) or a new topic.
+function topicOpen({ id, day, date } = {}) {
+  const { byDay, dayOf } = schedule();
+  let t = id ? cal().topics.find(x => x.id === id) : day != null ? topicOfDay(day) : null;
+  const n = t ? t.day ?? dayOf[t.id] : day ?? null, f = n != null ? folderOf(n) : null;
+  if (!t) { const p = f && appDay(n); t = { id: "t" + Date.now(), topic: f ? (f.status === "manual" ? "" : f.title || "") : "", notes: "", status: f ? "in progress" : "ready", ...(n != null ? { day: n } : {}) }; }
+  const isNew = !cal().topics.includes(t), planned = t.day == null && n != null;
+  CAL.edit = t;
+  const dt = t.postedAt || "";
+  $("#topicBody").innerHTML = `
+    <form onsubmit="topicSubmit();return false">
+    <div class="row"><h2 style="font-size:26px">${isNew ? (n != null ? `Day ${n}` : "New topic") : `Edit${n != null ? ` Day ${n}` : ""}`}</h2><span style="flex:1"></span>
+      ${n != null && f ? `<span class="chip">${esc(f.status === "manual" ? "made by hand" : f.status)}</span>` : ""}</div>
+    <label>Title</label><input id="tpTitle" type="text" value="${esc(t.topic || "")}" placeholder="What is the reel about?" required>
+    <label>Description</label><textarea id="tpNotes" rows="3" placeholder="Notes for the script: angle, keyword, facts…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();topicSubmit()}">${esc(t.notes || "")}</textarea>
+    <div class="row" style="gap:14px;align-items:flex-end;margin-top:6px">
+      <div><label>Day number</label><input id="tpDay" type="number" min="0" style="width:110px" value="${n ?? ""}" placeholder="next free">
+        ${planned ? `<div class="muted" style="font-size:12px">planned; type a number to fix it</div>` : ""}</div>
+      <div><label>Posted on</label><input id="tpPosted" type="datetime-local" value="${esc(dt)}" style="width:auto"></div>
+      <label class="pick" style="margin-bottom:8px"><input type="checkbox" id="tpDone" ${t.status === "done" ? "checked" : ""}> Done</label></div>
+    ${n != null && !t.postedAt && dateOfDay(n) ? `<p class="muted" style="font-size:12.5px;margin:4px 0 0">Planned for ${dateOfDay(n).toDateString()}. Setting "Posted on" marks it done.</p>` : ""}
+    ${n != null ? `<p class="muted" style="font-size:12.5px;margin:4px 0 0">${esc(slotHint(n))}</p>` : ""}
+    <div class="row" style="margin-top:16px;gap:8px"><button class="accent" type="submit">Save</button>
+      <button type="button" onclick="topicDlg.close()">Cancel</button><span style="flex:1"></span>
+      ${n != null && appDay(n) ? `<button type="button" onclick="topicDlg.close();openDay(${n})">Open Day ${n}</button>` : ""}
+      ${isNew ? "" : `<button type="button" class="bad" onclick="topicDelete('${t.id}').then(ok=>ok&&topicDlg.close())">Delete</button>`}</div>
+    </form>`;
+  CAL.editPlanned = planned ? n : null;
+  topicDlg.showModal(); setTimeout(() => $("#tpTitle").focus(), 30);
+}
+async function topicSubmit() {
+  const t = CAL.edit, v = $("#tpDay").value;
+  const ch = { topic: $("#tpTitle").value, notes: $("#tpNotes").value, postedAt: $("#tpPosted").value, done: $("#tpDone").checked || !!$("#tpPosted").value };
+  if (!(CAL.editPlanned != null && +v === CAL.editPlanned)) ch.day = v;      // an unchanged planned number stays unpinned
+  if (!ch.topic.trim()) return $("#tpTitle").focus();
+  if (await topicApply(t, ch)) { topicDlg.close(); if (PAGE === "calendar") renderCalPage(); }
+}
+function openDay(n) { if (!appDay(n)) return topicOpen({ day: n }); go("reels"); select(n); }
+
+function calEntry(n, t) {
+  const f = folderOf(n), done = t?.status === "done";
+  const click = t ? `topicOpen({id:'${t.id}'})` : `topicOpen({day:${n}})`;
+  return `<div class="ent ${done ? "done" : ""}">
+    <div class="d"><span>Day ${n}${t?.postedAt ? ` · ${new Date(t.postedAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}` : ""}</span>
       ${t ? `<input type="checkbox" class="tick" ${done ? "checked" : ""} onchange="tickTopic('${t.id}', this.checked)" title="${done ? "Mark not done" : "Mark done"}">` : ""}</div>
-    ${t ? `<div class="t ${done ? "done" : ""}" title="${esc(t.notes || t.topic)}" onclick="${proj ? `openDay(${n})` : `CAL.view='list';renderCalPage()`}">${esc(t.topic)}</div>`
-      : proj && proj.status !== "manual" ? `<div class="t" onclick="openDay(${n})" title="A reel not from the calendar">${esc(proj.title)}</div>`
-      : n >= 1 && !proj ? `<a href="#" class="muted" style="font-size:12px" onclick="topicAdd(${n});return false">+ topic</a>` : ""}
-    ${proj ? `<span class="chip" style="align-self:flex-start;font-size:11px;${proj.status === "manual" ? "" : "cursor:pointer"}" ${proj.status === "manual" ? `title="made by hand, outside the app"` : `onclick="openDay(${n})"`}>${esc(proj.status === "manual" ? "made by hand" : proj.status)}</span>` : n >= 1 ? `<span class="slot">${esc(slotHint(n))}</span>` : ""}
+    ${t ? `<div class="t ${done ? "done" : ""}" title="${esc(t.notes || t.topic)}" onclick="${click}">${esc(t.topic)}</div>`
+      : f ? `<div class="t" onclick="${click}">${esc(f.status === "manual" ? "(made by hand)" : f.title)}</div>`
+      : `<a href="#" class="muted" style="font-size:12px" onclick="topicOpen({day:${n}});return false">+ topic</a>`}
+    ${f && !done ? `<span class="chip" style="align-self:flex-start;font-size:11px;cursor:pointer" onclick="openDay(${n})">${esc(f.status === "manual" ? "made by hand" : f.status)}</span>` : f && done && appDay(n) ? `<a href="#" style="font-size:11.5px" onclick="openDay(${n});return false">open Day ${n}</a>` : !t ? `<span class="slot">${esc(slotHint(n))}</span>` : ""}
   </div>`;
 }
 function renderCalPage() {
-  const topics = cal().topics || [], { dayOf, made } = schedule(), doneN = topics.filter(t => t.status === "done").length;
+  const topics = cal().topics, { byDay, dayOf } = schedule(), doneN = topics.filter(t => t.status === "done").length;
   if (!CAL.month) { const d = new Date(); CAL.month = new Date(d.getFullYear(), d.getMonth(), 1); }
+  // which Days fall on which date (every Day with a topic or a folder, plus empty future Days to plan)
+  const top = Math.max(STATE.nextDay + 45, ...Object.keys(byDay).map(Number).map(x => x + 1));
+  const onDate = {}, undated = [];
+  for (let n = 0; n < top; n++) {
+    const t = byDay[n], f = folderOf(n), d = dateOfDay(n);
+    if (!t && !f && (n < STATE.nextDay || !d)) continue;
+    if (!d) { undated.push(n); continue; }
+    (onDate[ymd(d)] ||= []).push(n);
+  }
   const m = CAL.month, first = new Date(m.getFullYear(), m.getMonth(), 1), lead = (first.getDay() + 6) % 7;     // weeks start on Monday
   const cells = []; for (let k = 0; k < 42; k++) cells.push(new Date(first.getFullYear(), first.getMonth(), 1 - lead + k));
+  const today = ymd(new Date());
   const month = `<div class="month">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => `<div class="dow">${d}</div>`).join("")}
-    ${cells.map(d => calCell(d, d.getMonth() === m.getMonth())).join("")}</div>`;
-  const list = `<table><thead><tr><th style="width:34px">✓</th><th style="width:150px">Day</th><th>Topic</th><th>Notes</th><th style="width:110px">Status</th><th style="width:170px"></th></tr></thead><tbody>
-    ${topics.map((t, i) => { const n = dayOf[t.id], done = t.status === "done";
+    ${cells.map(d => { const ns = onDate[ymd(d)] || [], done = ns.length && ns.every(n => byDay[n]?.status === "done");
+      return `<div class="cell ${d.getMonth() === m.getMonth() ? "" : "out"} ${ymd(d) === today ? "today" : ""} ${done ? "done" : ""}">
+        <div class="d"><b style="color:var(--ink)">${d.getDate()}</b></div>${ns.map(n => calEntry(n, byDay[n])).join("")}</div>`; }).join("")}</div>
+    ${undated.length ? `<p class="muted" style="font-size:13px;margin-top:10px">No date yet: ${undated.map(n => `<a href="#" onclick="topicOpen({day:${n}});return false">Day ${n}${byDay[n] ? `: ${esc(byDay[n].topic.slice(0, 40))}` : folderOf(n) ? `: ${esc(folderOf(n).title.slice(0, 40))}` : ""}</a>`).join(" · ")}</p>` : ""}`;
+  // the list: Days in order, then open topics waiting for a number
+  const rows = Object.keys(byDay).map(Number).sort((a, b) => a - b).map(n => byDay[n]);
+  for (const t of topics) if (!rows.includes(t)) rows.push(t);
+  const queue = topics.filter(t => t.day == null && t.status !== "done");
+  const list = `
+    <form class="row addrow" onsubmit="topicQuickAdd();return false">
+      <input id="qaTitle" type="text" placeholder="New topic title" style="flex:2;min-width:200px">
+      <input id="qaNotes" type="text" placeholder="Description (optional)" style="flex:3;min-width:200px">
+      <input id="qaDay" type="number" min="0" placeholder="Day" style="width:90px" title="Leave empty for the next free day">
+      <button class="accent" type="submit">Add</button></form>
+    <table><thead><tr><th style="width:34px">✓</th><th style="width:96px">Day</th><th>Title</th><th>Description</th><th style="width:200px">Posted on</th><th style="width:96px">Status</th><th style="width:150px"></th></tr></thead><tbody>
+    ${rows.map(t => { const n = dayOf[t.id], done = t.status === "done", qi = queue.indexOf(t), f = n != null ? folderOf(n) : null;
       return `<tr class="${done ? "done" : ""}"><td><input type="checkbox" class="tick" ${done ? "checked" : ""} onchange="tickTopic('${t.id}', this.checked)"></td>
-        <td>${n ? `<b>Day ${n}</b><br><span class="muted" style="font-size:12px">${dateOfDay(n).toDateString().slice(0, 10)}</span>` : `<span class="muted">${done ? "done" : "—"}</span>`}
-          ${made[t.id] ? "" : `<br><input type="number" min="1" placeholder="pin day" value="${t.day || ""}" style="width:90px;font-size:12px;padding:2px 6px" onchange="topicEdit('${t.id}','day',this.value)">`}</td>
-        <td><input type="text" value="${esc(t.topic)}" onchange="topicEdit('${t.id}','topic',this.value)"></td>
-        <td><input type="text" value="${esc(t.notes || "")}" onchange="topicEdit('${t.id}','notes',this.value)"></td>
-        <td><span class="chip ${done ? "ok" : ""}">${esc(t.status)}</span></td>
-        <td><button class="small" onclick="topicMove('${t.id}',-1)" ${i ? "" : "disabled"} title="Earlier">↑</button><button class="small" onclick="topicMove('${t.id}',1)" ${i < topics.length - 1 ? "" : "disabled"} title="Later">↓</button>
-          ${made[t.id] ? `<button class="small" onclick="openDay(${made[t.id]})">Open</button>` : ""}<button class="small" onclick="topicDelete('${t.id}')" title="Delete">✕</button></td></tr>`; }).join("")}
+        <td><input type="number" min="0" value="${t.day ?? ""}" placeholder="${n ?? "—"}" title="${t.day == null && n != null ? `planned as Day ${n}` : "Day number"}" style="width:78px;font-size:13px;padding:3px 6px" onchange="topicField('${t.id}','day',this.value)">
+          ${n != null && dateOfDay(n) && !t.postedAt ? `<br><span class="muted" style="font-size:11.5px">${dateOfDay(n).toDateString().slice(0, 10)}</span>` : ""}</td>
+        <td><input type="text" value="${esc(t.topic)}" onchange="topicField('${t.id}','topic',this.value)"></td>
+        <td><input type="text" value="${esc(t.notes || "")}" onchange="topicField('${t.id}','notes',this.value)"></td>
+        <td><input type="datetime-local" value="${esc(t.postedAt || "")}" style="font-size:12.5px;padding:3px 4px;width:100%" onchange="topicField('${t.id}','postedAt',this.value)"></td>
+        <td><span class="chip ${done ? "ok" : ""}">${esc(done ? "done" : f ? (f.status === "manual" ? "made by hand" : f.status) : t.status)}</span></td>
+        <td style="white-space:nowrap">${qi >= 0 ? `<button class="small" onclick="topicMove('${t.id}',-1)" ${qi ? "" : "disabled"} title="Earlier">↑</button><button class="small" onclick="topicMove('${t.id}',1)" ${qi < queue.length - 1 ? "" : "disabled"} title="Later">↓</button>` : ""}
+          <button class="small" onclick="topicOpen({id:'${t.id}'})" title="Edit">✎</button>${n != null && appDay(n) ? `<button class="small" onclick="openDay(${n})">Open</button>` : ""}<button class="small" onclick="topicDelete('${t.id}')" title="Delete">✕</button></td></tr>`; }).join("")}
     </tbody></table>`;
   $("#pageCal").innerHTML = `
     <div class="row"><h2 style="font-size:34px">Content calendar</h2><span class="grow" style="flex:1"></span>
-      <span class="chip ok">${doneN} done</span><span class="chip">${topics.length - doneN} to go</span></div>
+      <span class="chip ok">${doneN} done</span><span class="chip">${topics.length - doneN} to go</span><span class="chip">next: Day ${STATE.nextDay}</span></div>
     <div class="calbar">
       <button class="small ${CAL.view === "month" ? "primary" : ""}" onclick="CAL.view='month';renderCalPage()">Month</button>
       <button class="small ${CAL.view === "list" ? "primary" : ""}" onclick="CAL.view='list';renderCalPage()">List</button>
@@ -907,10 +1022,15 @@ function renderCalPage() {
         <button class="small" onclick="CAL.month=new Date(CAL.month.getFullYear(),CAL.month.getMonth()+1,1);renderCalPage()">▶</button>
         <button class="small" onclick="CAL.month=null;renderCalPage()">Today</button>` : ""}
       <span style="flex:1"></span>
-      <label style="margin:0">Day 1 was on</label><input type="date" value="${startDate()}" style="width:auto;font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:8px" onchange="cal().startDate=this.value;saveCal(true);renderCalPage()">
-      <button class="small accent" onclick="topicAdd()">+ Add topic</button></div>
-    <p class="muted" style="font-size:13px;margin:0 0 10px">Tick a topic when it's done (untick to undo). The daily run takes the first open topic. Made reels sit on their Day; pin a topic to a day in the list, the rest fill the next free days in order.</p>
+      <button class="small accent" onclick="topicOpen()">+ Add topic</button></div>
+    <p class="muted" style="font-size:13px;margin:0 0 10px">Click a topic to edit its title, description, Day number or post date. Tick it when it's done (untick to undo).
+      Day numbers are the same as on the Reels page: changing a made Day's number renames its folder. Posted Days sit on their post date; the next ones are planned one a day.</p>
     ${CAL.view === "month" ? month : list}`;
+}
+async function topicQuickAdd() {
+  const title = $("#qaTitle").value.trim(); if (!title) return $("#qaTitle").focus();
+  const t = { id: "t" + Date.now(), topic: "", notes: "", status: "ready" };
+  if (await topicApply(t, { topic: title, notes: $("#qaNotes").value, day: $("#qaDay").value })) { renderCalPage(); setTimeout(() => $("#qaTitle")?.focus(), 30); }
 }
 
 // ---------------- master chat (💬): Claude Code with full access to the app (lib/chat.js, docs/CHATBOT.md)

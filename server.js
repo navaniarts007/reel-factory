@@ -1,7 +1,7 @@
 // Reel Factory: open http://localhost:5757 after `node server.js` (or double-click start.bat).
 const http = require("http"), fs = require("fs"), path = require("path"), { execFile } = require("child_process");
 const U = require("./lib/util"), P = require("./lib/pipeline"), M = require("./lib/media"), S = require("./lib/skills");
-const G = require("./lib/gallery"), SG = require("./lib/suggest"), CHAT = require("./lib/chat");
+const G = require("./lib/gallery"), SG = require("./lib/suggest"), CHAT = require("./lib/chat"), CAL = require("./lib/calendar");
 const PULLS = {};                                   // skill id -> { busy, log } while its GitHub repo is pulled
 
 let cfg = U.loadConfig();
@@ -79,7 +79,7 @@ const server = http.createServer(async (req, res) => {
 
     // ---- api
     if (req.method === "GET" && parts[1] === "state") {
-      const cal = U.readJson(path.join(__dirname, "data", "calendar.json"), { topics: [] });
+      const cal = CAL.load(cfg);
       // the calendar page counts days from Day 1's date: from the earliest Day made in the app, counted back to Day 1
       const first = P.listProjects(cfg).filter(x => x.status !== "manual").map(x => P.load(cfg, x.day)).filter(x => x?.createdAt).sort((a, b) => a.day - b.day)[0];
       const d1 = first && { createdAt: new Date(new Date(first.createdAt).getTime() - (first.day - 1) * 864e5).toISOString() };
@@ -126,6 +126,14 @@ const server = http.createServer(async (req, res) => {
       const p = P.createProject(cfg, { topic, notes, calendarId, audience: b.audience, visual: b.visual, skill: b.skill, look: b.look });
       P.enqueue(cfg, p.day, ["script"]);
       return send(res, 200, { day: p.day });
+    }
+    // ---- a Day's number, title and post date, shared by the Reels page and the Calendar (lib/calendar.js); works for hand-made Days too
+    if (parts[1] === "days" && parts[2] != null) {
+      const day = +parts[2], b = req.method === "GET" ? {} : await body(req);
+      try {
+        if (req.method === "POST" && parts[3] === "renumber") return send(res, 200, CAL.renumber(cfg, day, b.to));
+        if (req.method === "PUT" && !parts[3]) return send(res, 200, { topic: CAL.setDay(cfg, day, { title: b.title, postedAt: b.postedAt }) });
+      } catch (e) { return send(res, 400, { error: e.message }); }
     }
     if (parts[1] === "projects" && parts[2]) {
       const day = +parts[2], action = parts[3];
@@ -291,7 +299,7 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if (req.method === "PUT" && parts[1] === "calendar") {
-      const b = await body(req); U.writeJson(path.join(__dirname, "data", "calendar.json"), b.calendar); return send(res, 200, { ok: true });
+      const b = await body(req); CAL.save(cfg, b.calendar); return send(res, 200, { ok: true });
     }
     if (req.method === "PUT" && parts[1] === "settings") { saveConfig(await body(req)); return send(res, 200, { ok: true }); }
     if (req.method === "POST" && parts[1] === "reference") {
