@@ -1,0 +1,22 @@
+{
+  "id": "collage",
+  "name": "Collage B-roll",
+  "by": "pyang5166",
+  "tagline": "Paper cut-outs and halftone: AI-made collage clips for the key ideas (Google Gemini).",
+  "repo": "https://github.com/pyang5166/gbro-collage-broll",
+  "licence": "MIT",
+  "looks": [
+    "collage-orange",
+    "collage-purple",
+    "collage-teal"
+  ],
+  "camera": "cut",
+  "types": [
+    "broll"
+  ],
+  "studio": null,
+  "needs": [
+    "GEMINI_API_KEY"
+  ],
+  "costNote": "Each still and each 5-second clip is a paid Google Gemini call on your key."
+}

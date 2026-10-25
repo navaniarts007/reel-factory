@@ -1,0 +1,23 @@
+{
+  "id": "onetake",
+  "name": "OneTake",
+  "by": "feitangyuan",
+  "tagline": "No cuts: one continuous camera move carries every scene into the next.",
+  "repo": "https://github.com/feitangyuan/onetake",
+  "licence": "PolyForm Noncommercial 1.0.0",
+  "licenceNote": "Studio films run OneTake's own code, which is free for noncommercial use only. The native look uses our own camera code, which that licence doesn't cover.",
+  "looks": [
+    "onetake-paper",
+    "onetake-dusk",
+    "onetake-ember"
+  ],
+  "camera": "onetake",
+  "types": [],
+  "studio": {
+    "skillDirs": [
+      "."
+    ],
+    "entry": "Use the onetake skill: read SKILL.md first."
+  },
+  "needs": []
+}

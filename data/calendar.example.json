@@ -1,0 +1,42 @@
+{
+  "_note": "Topic queue. The daily run takes the first 'ready' item. Edit freely in the app (Calendar tab) or here.",
+  "pattern": {
+    "_note": "14-day cycle by day number (Day 1 = slot 1). Added to the script prompt as a hint.",
+    "slots": [
+      "informative",
+      "trending GitHub repo (I pick the repo)",
+      "informative",
+      "hidden website",
+      "informative",
+      "model benchmark / AI tricks / AI updates",
+      "informative",
+      "informative",
+      "trending GitHub repo (I pick the repo)",
+      "informative",
+      "hidden website",
+      "a modern or 3D website I built",
+      "model benchmark / AI tricks / AI updates",
+      "AI news (neutral, fact-based) or informative"
+    ]
+  },
+  "topics": [
+    {
+      "id": "t1",
+      "topic": "RAG vs fine-tuning: which one does your AI app need?",
+      "notes": "Keyword RAG.",
+      "status": "ready"
+    },
+    {
+      "id": "t2",
+      "topic": "Docker in 60 seconds: containers explained with a shipping story",
+      "notes": "Keyword DOCKER.",
+      "status": "ready"
+    },
+    {
+      "id": "t3",
+      "topic": "n8n: automate your first workflow without code",
+      "notes": "Self-host with one Docker command. Keyword N8N.",
+      "status": "ready"
+    }
+  ]
+}

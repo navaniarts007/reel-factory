@@ -1,0 +1,28 @@
+{
+  "id": "lemo",
+  "name": "Lemo Opuscar",
+  "by": "lemomo-ai",
+  "tagline": "A library of film styles made in code: blueprint, Swiss, keynote, CRT, risograph…",
+  "repo": "https://github.com/lemomo-ai/lemo-opuscar",
+  "licence": "MIT",
+  "looks": [
+    "lemo-blueprint",
+    "lemo-swiss",
+    "lemo-keynote",
+    "lemo-crt",
+    "lemo-riso",
+    "lemo-dossier",
+    "lemo-pictogram",
+    "lemo-whiteboard"
+  ],
+  "camera": "cut",
+  "types": [],
+  "studio": {
+    "skillDirs": [
+      "plugin/skills"
+    ],
+    "entry": "Use the Lemo-Opuscar library in this folder: read AGENTS.md, then the chosen style's STYLE.md.",
+    "styles": true
+  },
+  "needs": []
+}

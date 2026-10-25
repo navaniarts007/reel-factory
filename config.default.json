@@ -1,0 +1,31 @@
+{
+  "daysRoot": "..",
+  "dayFolder": "Day {n}",
+  "port": 5757,
+  "fps": 60,
+  "llm": {
+    "provider": "claude-code",
+    "claudeBin": "claude",
+    "apiModel": "claude-sonnet-5-5"
+  },
+  "voice": {
+    "mode": "clone",
+    "model": "turbo",
+    "device": "cuda",
+    "reference": "voice/reference.wav",
+    "whisper": "base.en",
+    "temperature": 0.6
+  },
+  "captions": true,
+  "sfxVolume": 0.35,
+  "musicVolume": 0.18,
+  "dailyRunAt": "07:00",
+  "nextDay": null,
+  "broll": {
+    "imageModel": "gemini-2.5-flash-image",
+    "videoModel": "gemini-omni-flash-preview"
+  },
+  "images": {
+    "model": "gemini-2.5-flash-image"
+  }
+}

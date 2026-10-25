@@ -1,0 +1,23 @@
+{
+  "id": "clawd",
+  "name": "Claude Animation Base",
+  "by": "JohnHeibel",
+  "tagline": "Clawd, Claude's mascot, acts out your idea in hand-painted cartoon scenes.",
+  "repo": "https://github.com/JohnHeibel/ClaudeAnimationBase",
+  "licence": "MIT",
+  "licenceNote": "Clawd is Anthropic's mascot. Don't suggest that Anthropic made or endorses your reel.",
+  "looks": [
+    "clawd-paper"
+  ],
+  "camera": "cut",
+  "types": [
+    "clawd"
+  ],
+  "studio": {
+    "skillDirs": [
+      "."
+    ],
+    "entry": "Read ANIMATION_GUIDE.md first and follow it. Its rule 2 (no text) applies to the painting; my captions are burned in separately."
+  },
+  "needs": []
+}

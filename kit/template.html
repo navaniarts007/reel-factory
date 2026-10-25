@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{FONT}}&display=swap">
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { background: #E9E8E3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  svg { height: min(86vh, calc((100vw - 32px) * 16 / 9)); aspect-ratio: 9 / 16; display: block; }
+  .ink { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; }
+  text { text-anchor: middle; letter-spacing: 1px; }
+  .left { text-anchor: start; }
+  .mono { letter-spacing: 0; font-weight: 700; }
+  #controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 0 16px; }
+  #controls button { font-size: 15px; padding: 3px 12px; border: 1.5px solid #2B2B2B; border-radius: 8px; background: #fff; cursor: pointer; }
+  body.render { display: block; background: #fff; }
+  body.render svg { width: 1080px; height: 1920px; }
+  body.render #controls { display: none; }
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 540 960"></svg>
+<div id="controls"></div>
+<script>
+{{BRAND}}
+// the skill's look (kit/themes.js), merged over the brand: anything it leaves out stays as in brand.js
+(function merge(a, b) { for (const k in b) b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? merge(a[k] ||= {}, b[k]) : a[k] = b[k]; })(BRAND, {{THEME}});
+document.querySelector("svg").style.background = BRAND.colors.paper;
+document.head.insertAdjacentHTML("beforeend", `<style>text{font-family:${BRAND.fonts.hand};font-weight:${BRAND.weight || 400}} .mono{font-family:${BRAND.fonts.mono}}</style>`);
+window.RENDER_MODE = location.hash === "#render";
+if (window.RENDER_MODE) document.body.classList.add("render");
+</script>
+<script>
+{{ENGINE}}
+</script>
+<script>
+{{COMPONENTS}}
+</script>
+<script>
+{{CUSTOM}}
+</script>
+<script>
+const TIMELINE = {{TIMELINE}};
+boot(TIMELINE);
+</script>
+</body>
+</html>

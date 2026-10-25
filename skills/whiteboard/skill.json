@@ -1,0 +1,14 @@
+{
+  "id": "whiteboard",
+  "name": "Whiteboard",
+  "by": "Reel Factory",
+  "tagline": "The classic: white paper, charcoal marker, one purple accent.",
+  "licence": "yours",
+  "looks": [
+    "whiteboard"
+  ],
+  "camera": "cut",
+  "types": [],
+  "studio": null,
+  "needs": []
+}

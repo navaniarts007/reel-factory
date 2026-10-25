@@ -1,0 +1,1 @@
+- broll: { "type":"broll", "metaphor": one sentence describing the picture (≤ 160 chars, physical things only), "objects": 3–6 physical things in it, "color": orange|mustard|green|purple|teal } — a paper-collage B-roll clip of the metaphor (made later from a still I approve); no words on screen.

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reel Factory</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+  :root { --paper:#FBFBF8; --card:#FFFFFF; --ink:#2B2B2B; --soft:#4A4A46; --muted:#6B6B66; --line:#E2DFD7; --accent:#8B7BB8; --accent-ink:#5E4E91; --tint:#F2EFF8; --bad:#B5524C; --bad-tint:#FBEDEC; --ok:#3F7D58; --warn:#9A6A12; --warn-tint:#FBF3E2; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.5 "DM Sans", system-ui, sans-serif; }
+  h1,h2,h3 { font-family:"Patrick Hand", "Comic Sans MS", cursive; font-weight:400; margin:0; }
+  header { display:flex; align-items:center; gap:16px; padding:12px 20px; border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:30px; } header .grow { flex:1; }
+  .chip { font-size:12.5px; padding:3px 10px; border-radius:99px; border:1px solid var(--line); background:var(--paper); white-space:nowrap; }
+  .chip.ok { border-color:#BFD9C8; color:var(--ok); } .chip.bad { border-color:#E6C2BF; color:var(--bad); background:var(--bad-tint); }
+  main { display:grid; grid-template-columns:300px 1fr; min-height:calc(100vh - 60px); }
+  aside { border-right:1px solid var(--line); padding:16px; display:flex; flex-direction:column; gap:14px; background:var(--card); }
+  section.panel { padding:18px 24px 40px; min-width:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  label { font-size:13px; color:var(--muted); display:block; margin:8px 0 4px; }
+  input[type=text], textarea, select { width:100%; font:inherit; color:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  textarea { resize:vertical; }
+  textarea.mono { font:13px/1.45 Consolas, "Courier New", monospace; }
+  button { font:inherit; font-weight:500; padding:8px 14px; border-radius:10px; border:1.5px solid var(--ink); background:#fff; color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--ink); color:#fff; } button.accent { background:var(--accent-ink); border-color:var(--accent-ink); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; } button.small { padding:4px 10px; font-size:13px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .days { display:flex; flex-direction:column; gap:6px; overflow:auto; }
+  .day { text-align:left; border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:var(--paper); cursor:pointer; }
+  .day.sel { border-color:var(--accent); background:var(--tint); }
+  .day b { font-family:"Patrick Hand", cursive; font-size:19px; font-weight:400; } .day small { display:block; color:var(--muted); }
+  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin:14px 0 16px; flex-wrap:wrap; }
+  .tab { border:none; border-bottom:3px solid transparent; border-radius:0; padding:8px 14px; background:none; color:var(--muted); }
+  .tab.on { color:var(--ink); border-bottom-color:var(--accent); }
+  .tab .n { display:inline-block; width:20px; height:20px; border-radius:50%; background:var(--line); color:var(--ink); font-size:12px; line-height:20px; text-align:center; margin-right:6px; }
+  .tab.done .n { background:var(--accent); color:#fff; }
+  .scene { display:grid; grid-template-columns:150px 1fr 1fr; gap:12px; border:1px solid var(--line); border-radius:12px; padding:12px; background:#fff; margin-bottom:10px; }
+  .scene .meta b { font-family:"Patrick Hand", cursive; font-size:20px; font-weight:400; display:block; }
+  .scene .meta small { color:var(--muted); display:block; }
+  .note { padding:10px 14px; border-radius:10px; background:var(--tint); border:1px solid #DCD5EC; }
+  .note.warn { background:var(--warn-tint); border-color:#EBD9B0; } .note.bad { background:var(--bad-tint); border-color:#E6C2BF; }
+  .checks { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+  .checks li { display:grid; grid-template-columns:70px 1fr; gap:10px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  .tag { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .tag.ok { color:var(--ok); } .tag.warn { color:var(--warn); } .tag.error { color:var(--bad); }
+  .log { font:12.5px/1.5 Consolas, monospace; background:#26252B; color:#E9E6F2; border-radius:12px; padding:12px; height:180px; overflow:auto; white-space:pre-wrap; }
+  .grid2 { display:grid; grid-template-columns:minmax(0,380px) 1fr; gap:20px; align-items:start; }
+  video { width:100%; max-width:380px; aspect-ratio:9/16; background:#111; border-radius:14px; }
+  img.sheet { width:100%; border-radius:10px; border:1px solid var(--line); }
+  table { border-collapse:collapse; width:100%; background:#fff; } td, th { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; font-size:14px; vertical-align:top; }
+  .count { font-size:12px; color:var(--muted); } .count.over { color:var(--bad); font-weight:700; }
+  .busy { display:inline-flex; align-items:center; gap:8px; color:var(--accent-ink); font-weight:500; }
+  .busy:before { content:""; width:12px; height:12px; border-radius:50%; border:2px solid var(--accent); border-right-color:transparent; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  dialog { border:none; border-radius:16px; padding:0; width:min(760px, 94vw); box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  dialog .in { padding:20px 24px; max-height:84vh; overflow:auto; }
+  .muted { color:var(--muted); } .hidden { display:none !important; }
+  /* app sidebar (pages) */
+  .shell { display:grid; grid-template-columns:76px 1fr; }
+  nav.side { background:#26252B; display:flex; flex-direction:column; gap:6px; padding:12px 8px; position:sticky; top:61px; height:calc(100vh - 61px); }
+  nav.side button { border:none; background:none; color:#C9C4D9; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 4px; border-radius:12px; font-size:12px; }
+  nav.side button .i { font-size:22px; line-height:1; } nav.side button.on { background:#3B3946; color:#fff; } nav.side button:hover { color:#fff; }
+  /* calendar page */
+  .calbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0 14px; }
+  .month { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:6px; }
+  .month .dow { font-size:12px; color:var(--muted); text-align:center; }
+  .cell { min-height:108px; border:1px solid var(--line); border-radius:10px; background:#fff; padding:6px 8px; font-size:13px; display:flex; flex-direction:column; gap:3px; }
+  .cell.out { background:transparent; border-style:dashed; opacity:.55; } .cell.today { border-color:var(--accent); box-shadow:0 0 0 2px var(--tint); }
+  .cell.done { background:#F1F7F3; } .cell .d { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; }
+  .cell .t { font-weight:500; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; cursor:pointer; }
+  .cell .t.done { text-decoration:line-through; color:var(--muted); } .cell .slot { font-size:11px; color:var(--muted); }
+  .tick { width:18px; height:18px; accent-color:var(--ok); cursor:pointer; margin:0; }
+  tr.done td { background:#F6FAF7; } tr.done input[type=text] { color:var(--muted); text-decoration:line-through; }
+  /* versions: tick what to make */
+  label.pick { display:inline-flex; align-items:center; gap:5px; margin:3px 12px 3px 0; font-size:13.5px; color:var(--ink); cursor:pointer; }
+  label.pick input { margin:0; accent-color:var(--accent-ink); }
+  .pickrow { display:grid; grid-template-columns:170px 1fr; align-items:baseline; }
+  b.pickhead { font-size:13px; color:var(--soft); }
+  /* scene thumbnails in the version popup */
+  .thumbs { display:grid; grid-template-columns:repeat(auto-fill, minmax(124px, 1fr)); gap:10px; max-height:520px; overflow:auto; padding:2px 4px 2px 2px; }
+  .thumb { border:1px solid var(--line); border-radius:10px; background:#fff; padding:4px; cursor:pointer; font-size:12px; line-height:1.3; }
+  .thumb:hover { border-color:var(--accent); } .thumb.on { border-color:var(--accent-ink); box-shadow:0 0 0 2px var(--tint); }
+  .thumb .pic { width:116px; height:206px; border-radius:7px; background-repeat:no-repeat; background-color:var(--paper); margin:0 auto 4px; position:relative; }
+  .thumb .pic span { position:absolute; left:4px; top:4px; background:rgba(0,0,0,.6); color:#fff; border-radius:6px; padding:0 6px; font-weight:700; }
+  .thumb .say { color:var(--muted); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  /* image suggestions */
+  .sugg { border:1px solid var(--line); border-radius:12px; background:#fff; padding:10px 12px; margin-bottom:10px; }
+  .sugg .cands { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .sugg .cand { width:150px; font-size:11.5px; color:var(--muted); } .sugg .cand img { width:150px; height:100px; object-fit:contain; background:var(--paper); border:1px solid var(--line); border-radius:8px; display:block; }
+  /* master chat */
+  #chatBtn { position:fixed; right:22px; bottom:22px; width:58px; height:58px; border-radius:50%; border:none; background:var(--accent-ink); color:#fff; font-size:26px; box-shadow:0 8px 24px rgba(0,0,0,.25); z-index:20; padding:0; }
+  #chatBtn.busy:after { content:""; position:absolute; top:4px; right:4px; width:12px; height:12px; border-radius:50%; background:#F2C14E; border:2px solid #fff; }
+  #chat { position:fixed; right:22px; bottom:92px; width:min(440px, calc(100vw - 32px)); height:min(680px, calc(100vh - 120px)); background:#fff; border:1px solid var(--line); border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25); z-index:20; display:flex; flex-direction:column; overflow:hidden; }
+  #chat .top { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); background:var(--tint); }
+  #chat .msgs { flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .msg { padding:8px 11px; border-radius:12px; max-width:92%; white-space:pre-wrap; word-wrap:break-word; font-size:14px; line-height:1.45; }
+  .msg.user { align-self:flex-end; background:var(--accent-ink); color:#fff; } .msg.bot { align-self:flex-start; background:var(--paper); border:1px solid var(--line); }
+  .msg.tool { align-self:flex-start; font:12px/1.4 Consolas, monospace; color:var(--muted); padding:2px 6px; } .msg.err { background:var(--bad-tint); border:1px solid #E6C2BF; }
+  #chat .in { display:flex; gap:6px; padding:10px; border-top:1px solid var(--line); } #chat textarea { flex:1; resize:none; height:58px; font-size:14px; }
+  @media (max-width: 900px) { .shell { grid-template-columns:1fr; } nav.side { flex-direction:row; height:auto; position:static; top:auto; } main { grid-template-columns:1fr; } aside { border-right:none; border-bottom:1px solid var(--line); } .scene, .grid2 { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Reel Factory</h1>
+  <span class="grow"></span>
+  <span id="chips" class="row"></span>
+</header>
+<div class="shell">
+<nav class="side">
+  <button id="navReels" class="on" onclick="go('reels')"><span class="i">🎬</span>Reels</button>
+  <button id="navCal" onclick="go('calendar')"><span class="i">📅</span>Calendar</button>
+  <button onclick="openSettings()"><span class="i">⚙️</span>Settings</button>
+</nav>
+<main id="pageReels">
+  <aside>
+    <div class="card">
+      <h2 style="font-size:24px">New reel · Day <span id="nextDay">?</span></h2>
+      <label>Topic (leave empty to use the calendar)</label>
+      <input id="topic" type="text" placeholder="e.g. What is MCP in 60 seconds">
+      <label>Notes for the script (optional)</label>
+      <textarea id="notes" rows="2" placeholder="story idea, keyword, links to check"></textarea>
+      <label>Write for</label>
+      <select id="newAud"></select>
+      <label>Visual style</label>
+      <select id="newVis"></select>
+      <label>Skill (the video's world)</label>
+      <select id="newSkill" onchange="$('#newLook').innerHTML = lookOptions(this.value); $('#newSkillInfo').innerHTML = skillInfo(this.value)"></select>
+      <label>Look</label>
+      <select id="newLook"></select>
+      <div id="newSkillInfo"></div>
+      <div class="muted" style="font-size:13px;margin:6px 0" id="nextTopic"></div>
+      <button class="primary" style="width:100%" onclick="createReel()">Write the script</button>
+    </div>
+    <h3 style="font-size:20px">Days</h3>
+    <div class="days" id="days"></div>
+  </aside>
+  <section class="panel" id="panel"><p class="muted">Pick a day, or write a new script.</p></section>
+</main>
+<section class="panel hidden" id="pageCal"></section>
+</div>
+
+<button id="chatBtn" onclick="chatToggle()" title="Ask Reel Factory (Claude Code, full access to the app)">💬</button>
+<div id="chat" class="hidden">
+  <div class="top"><b style="font-family:'Patrick Hand',cursive;font-size:22px;font-weight:400">Reel Factory assistant</b><span style="flex:1"></span>
+    <button class="small hidden" id="chatRestart" onclick="chatRestart()" title="The assistant changed the app's code: restart to load it">↻ Restart app</button>
+    <button class="small" onclick="chatNew()" title="Start a new conversation">New chat</button><button class="small" onclick="chatToggle()">✕</button></div>
+  <div class="msgs" id="chatMsgs"></div>
+  <div class="in"><textarea id="chatIn" placeholder="Ask or tell me anything: “show Day 6’s script”, “mark MCP done in the calendar”, “add a topic about Docker”…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend()}"></textarea>
+    <div style="display:flex;flex-direction:column;gap:4px"><button class="accent" id="chatSendBtn" onclick="chatSend()">Send</button><button class="small hidden" id="chatStopBtn" onclick="chatStop()">■ Stop</button></div></div>
+</div>
+
+
+<dialog id="settings"><div class="in">
+  <div class="row"><h2 style="font-size:28px">Settings</h2><span class="grow" style="flex:1"></span><button class="small" onclick="settings.close()">Close</button></div>
+  <h3 style="font-size:22px;margin-top:14px">Voice</h3>
+  <div class="note" id="refStatus"></div>
+  <p class="muted" style="font-size:13.5px">Record about 10 seconds in your normal video tone, in a quiet room, phone or headset mic close to your mouth.
+    Read: <i>"Hello guys! Welcome back to my 365-Day Tech Challenge. Today I'll show you something super simple that can save you hours every week. Let's go!"</i></p>
+  <div class="row"><button id="recBtn" onclick="toggleRef()">● Record reference clip</button>
+    <label class="row" style="margin:0"><input type="file" id="refFile" accept="audio/*" onchange="uploadRef(this.files[0])"> or upload a file</label></div>
+  <audio id="refAudio" controls class="hidden" style="width:100%;margin-top:8px"></audio>
+  <div class="row" style="margin-top:10px">
+    <div style="flex:1"><label>Default voice</label><select id="sVoiceMode"><option value="clone">AI clone of my voice (Chatterbox)</option><option value="recording">My own recording</option></select></div>
+    <div style="flex:1"><label>Voice model</label><select id="sModel"><option value="turbo">Chatterbox Turbo (GPU)</option><option value="nano">Chatterbox Nano (CPU friendly)</option><option value="test">Test (silent clips)</option></select></div>
+    <div style="flex:1"><label>Run on</label><select id="sDevice"><option value="cuda">GPU (RTX 3050)</option><option value="cpu">CPU</option></select></div>
+    <div style="flex:1"><label>Voice clarity</label><select id="sTemp"><option value="0.4">Very clear, flatter (0.4)</option><option value="0.5">Clear (0.5)</option><option value="0.6">Balanced (0.6)</option><option value="0.7">Livelier (0.7)</option><option value="0.8">Most expressive (0.8)</option></select></div>
+    <div style="flex:1"><label>Longest pause inside a line</label><select id="sPause"><option value="0.3">Tight (0.3 s)</option><option value="0.45">Natural (0.45 s)</option><option value="0.6">Relaxed (0.6 s)</option><option value="1">Keep pauses (1 s)</option></select></div>
+  </div>
+  <h3 style="font-size:22px;margin-top:18px">Captions</h3>
+  <label class="row" style="color:var(--ink)"><input type="checkbox" id="sCaptions"> Burned-in captions: black bar at the bottom, white words, the spoken word lit up</label>
+  <h3 style="font-size:22px;margin-top:18px">Skills</h3>
+  <p class="muted" style="font-size:13.5px">The GitHub skills behind each video world, pulled into <code>vendor/skills</code>. Looks work without pulling; Studio films and Clawd's painter need the pulled repo.</p>
+  <div id="skillRows"></div>
+  <h3 style="font-size:22px;margin-top:18px">Script writer</h3>
+  <div class="row"><div style="flex:1"><label>Provider</label><select id="sProvider"><option value="claude-code">My Claude subscription (Claude Code)</option><option value="api">Anthropic API key (.env)</option></select></div>
+    <div style="flex:1"><label>API model (only for the API)</label><input id="sApiModel" type="text"></div></div>
+  <div class="row" style="margin-top:12px"><button class="primary" onclick="saveSettings()">Save settings</button></div>
+  <p class="muted" style="font-size:13.5px;margin-top:18px">The content calendar has its own page now: 📅 Calendar in the sidebar.</p>
+  <div class="hidden">
+  <p class="muted" style="font-size:13.5px">The 7:00 run takes the first <b>ready</b> topic. Status: ready, in progress, done.</p>
+  <table><thead><tr><th>Topic</th><th>Notes</th><th style="width:120px">Status</th><th></th></tr></thead><tbody id="calRows"></tbody></table>
+  </div>
+</div></dialog>
+
+<dialog id="gvDlg" style="width:min(1180px,96vw)" onclose="pvStop()"><div class="in" id="gvBody"></div></dialog>
+
+<script>
+const $ = s => document.querySelector(s), esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let STATE = null, DAY = null, PROJ = null, TAB = "script", timer = null, dirty = false;
+const api = async (method, url, body, raw) => {
+  const r = await fetch(url, { method, headers: raw ? {} : { "content-type": "application/json" }, body: raw ? body : body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { alert(j.error || `Error ${r.status}`); throw new Error(j.error); }
+  return j;
+};
+const words = s => (String(s || "").match(/[A-Za-z0-9']+/g) || []).length;
+const AUD = { mixed: "Mixed (my usual style)", common: "Common man (no tech background)", student: "Student / beginner", developer: "Developer" };
+const VIS = { whiteboard: "Whiteboard explainer", motion: "Motion graphics (punchy text)", graphs: "Visual graphs (charts)", story: "Storytelling (comic panels)", pictorial: "Pictorial (objects pop in as you say them)" };
+const opts = (map, sel) => Object.entries(map).map(([k, l]) => `<option value="${k}" ${k === sel ? "selected" : ""}>${l}</option>`).join("");
+const audOptions = sel => opts(AUD, sel);
+// ---- skills (skills/<id>): the video's world. Each has looks; some add scene types or a Studio film.
+const skill = id => (STATE.skills || []).find(s => s.id === id) || STATE.skills[0];
+const skillOptions = sel => (STATE.skills || []).map(s => `<option value="${s.id}" ${s.id === sel ? "selected" : ""}>${esc(s.name)}${s.by !== "Reel Factory" ? " · " + esc(s.by) : ""}</option>`).join("");
+const lookOptions = (id, sel) => skill(id).looks.map(l => `<option value="${l.id}" ${l.id === sel ? "selected" : ""}>${esc(l.name)}</option>`).join("");
+function skillInfo(id) {
+  const s = skill(id), st = (STATE.skillStatus || []).find(x => x.id === id) || {}, miss = Object.entries(st.needs || {}).filter(([, ok]) => !ok).map(([k]) => k);
+  return `<div class="note ${miss.length || s.licenceNote ? "warn" : ""}" style="font-size:13px;margin-top:6px">${esc(s.tagline)}
+    <br><span class="muted">Licence: ${esc(s.licence)}${s.repo ? ` · <a href="${s.repo}" target="_blank">GitHub</a>${st.pulled ? ` · pulled ${esc(st.commit)}` : " · not pulled (Settings → Skills)"}` : ""}</span>
+    ${s.licenceNote ? `<br>${esc(s.licenceNote)}` : ""}${s.costNote ? `<br>${esc(s.costNote)}` : ""}
+    ${miss.length ? `<br><b>Needs ${miss.join(", ")} in .env</b> (add it yourself; the app never shows keys).` : ""}</div>`;
+}
+function skillRow(p) {
+  return `<label style="margin:0">Skill</label>
+    <select style="width:auto" onchange="setSkill(this.value)" ${p.busy ? "disabled" : ""}>${skillOptions(p.skill || "whiteboard")}</select>
+    <label style="margin:0 0 0 8px">Look</label>
+    <select style="width:auto" onchange="setSkill(null, this.value)" ${p.busy ? "disabled" : ""}>${lookOptions(p.skill || "whiteboard", p.look)}</select>`;
+}
+async function setSkill(id, look) {
+  if (dirty) await saveTimeline();
+  const change = id && id !== PROJ.skill;
+  PROJ = await api("POST", `/api/projects/${DAY}/skill`, { skill: id || PROJ.skill, look }); render();
+  if (change && PROJ.timeline && confirm("New skill set: the look changes right away. Rewrite the script for this skill too (new words, approve again)?")) run(["script"]);
+}
+
+async function loadState() {
+  STATE = await api("GET", "/api/state");
+  $("#nextDay").textContent = STATE.nextDay;
+  if (!$("#newAud").options.length) { $("#newAud").innerHTML = audOptions("mixed"); $("#newVis").innerHTML = opts(VIS, "whiteboard");
+    $("#newSkill").innerHTML = skillOptions("whiteboard"); $("#newLook").innerHTML = lookOptions("whiteboard"); }
+  $("#newSkillInfo").innerHTML = skillInfo($("#newSkill").value);
+  $("#nextTopic").innerHTML = STATE.nextTopic ? `Next from calendar: <b>${esc(STATE.nextTopic.topic)}</b>` : "Calendar is empty: type a topic.";
+  $("#chips").innerHTML = `<span class="chip ${STATE.setup.reference ? "ok" : "bad"}">${STATE.setup.reference ? "✓ Voice reference" : "✗ Record voice reference"}</span>
+    <span class="chip">Script: ${STATE.config.llm.provider === "api" ? "API key" : "Claude Code"}</span>
+    <span class="chip">Voice: ${esc(STATE.config.voice.model)} · ${esc(STATE.config.voice.device)}</span>`;
+  $("#days").innerHTML = STATE.projects.map(p => `<div class="day ${p.day === DAY ? "sel" : ""}" onclick="${p.status === "manual" ? "" : `select(${p.day})`}">
+    <b>Day ${p.day}</b><small>${esc(p.title || "")}</small><small>${esc(p.status)}</small></div>`).join("") || `<p class="muted">No days yet.</p>`;
+}
+
+function skillRows() {
+  $("#skillRows").innerHTML = (STATE.skillStatus || []).filter(x => skill(x.id).repo).map(x => { const s = skill(x.id);
+    return `<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><b style="min-width:190px">${esc(s.name)}</b>
+      <span class="muted" style="font-size:13px;min-width:200px">${esc(s.licence)}</span>
+      <span style="font-size:13px;flex:1">${x.pull?.busy ? "pulling… " + esc(x.pull.log.at(-1) || "") : x.pulled ? `✓ ${esc(x.commit)} · ${esc(x.date)}` : "not pulled"}${x.pull && !x.pull.busy && x.pull.log.at(-1)?.startsWith("✗") ? " " + esc(x.pull.log.at(-1)) : ""}</span>
+      ${Object.entries(x.needs).map(([k, ok]) => `<span class="chip ${ok ? "ok" : "bad"}">${k} ${ok ? "set" : "missing"}</span>`).join("")}
+      <button class="small" onclick="pullSkill('${x.id}')" ${x.pull?.busy ? "disabled" : ""}>${x.pulled ? "Update" : "Pull"}</button></div>`; }).join("");
+}
+async function pullSkill(id) {
+  await api("POST", "/api/skills/pull", { id });
+  const poll = async () => { await loadState(); skillRows(); if ((STATE.skillStatus.find(x => x.id === id).pull || {}).busy) setTimeout(poll, 1500); };
+  poll();
+}
+
+async function createReel() {
+  const j = await api("POST", "/api/projects", { topic: $("#topic").value, notes: $("#notes").value, audience: $("#newAud").value, visual: $("#newVis").value, skill: $("#newSkill").value, look: $("#newLook").value });
+  $("#topic").value = ""; $("#notes").value = ""; TAB = "script";
+  await loadState(); select(j.day);
+}
+
+async function select(day) {
+  if (dirty && DAY !== day && !confirm("You have unsaved script edits. Leave without saving?")) return;
+  dirty = false; DAY = day; await refresh(); loadState();
+}
+async function refresh() {
+  if (DAY == null) return;
+  PROJ = await api("GET", `/api/projects/${DAY}`);
+  render();
+  clearTimeout(timer);
+  if (PROJ.busy) timer = setTimeout(async () => { const wasBusy = PROJ.busy; await refresh(); if (wasBusy && !PROJ.busy) loadState(); }, 1500);
+  else if (PROJ.gallery?.running || PROJ.gallery?.waiting) timer = setTimeout(galleryTick, 4000);
+}
+
+async function galleryTick() {
+  if (DAY == null) return;
+  const day = DAY, p = await api("GET", `/api/projects/${day}`).catch(() => null);
+  if (!p || day !== DAY) return;
+  PROJ = p; const active = p.gallery?.running || p.gallery?.waiting;
+  if (TAB === "video") { if (active && !p.busy) galleryPaint(); else { GV.sig = ""; render(); } }
+  clearTimeout(timer);
+  if (p.busy) { render(); timer = setTimeout(refresh, 1500); } else if (p.gallery?.running || p.gallery?.waiting) timer = setTimeout(galleryTick, 4000);
+}
+function stepDone(name) {
+  const p = PROJ, d = p.done || {};
+  return { script: !!p.approved, media: !!(p.media || []).length, voice: !!d.voice, video: !!d.checks, copy: !!d.copy, export: p.status === "exported" }[name];
+}
+
+function render() {
+  const p = PROJ;
+  const tabs = [["script", "Script"], ["media", "Media"], ["voice", "Voice"], ["video", "Video"], ["copy", "Copy"], ["export", "Export"]];
+  const keepScroll = $("#log")?.scrollTop;
+  $("#panel").innerHTML = `
+    <div class="row"><h2 style="font-size:34px">Day ${p.day}: ${esc(p.title || p.topic)}</h2></div>
+    <div class="row muted" style="font-size:14px">${esc(p.topic)} · status <b>${esc(p.status)}</b>
+      ${p.busy ? `<span class="busy">${esc(p.job?.current || "waiting")}…</span>${stopBtn()}` : ""}</div>
+    ${p.error ? `<div class="note bad" style="margin-top:10px"><b>Last error:</b> ${esc(p.error)}</div>` : ""}
+    <div class="tabs">${tabs.map(([k, l], i) => `<button class="tab ${TAB === k ? "on" : ""} ${stepDone(k) ? "done" : ""}" onclick="TAB='${k}';render()"><span class="n">${i + 1}</span>${l}</button>`).join("")}</div>
+    <div id="tabBody">${({ script: tabScript, media: tabMedia, voice: tabVoice, video: tabVideo, copy: tabCopy, export: tabExport })[TAB]()}</div>
+    <h3 style="font-size:20px;margin:22px 0 6px">Log</h3><div class="log" id="log">${esc((p.log || []).join("\n"))}</div>`;
+  const lg = $("#log"); lg.scrollTop = p.busy ? lg.scrollHeight : (keepScroll ?? lg.scrollHeight);
+}
+
+// ---------------- 1. script
+function tabScript() {
+  const p = PROJ, tl = p.timeline;
+  if (!tl) return p.busy ? `<p class="busy">Claude is writing the script…</p>` : `<p>No script yet.</p><button class="primary" onclick="run(['script'])">Write the script</button>`;
+  const j = p.judge || {};
+  const total = tl.scenes.reduce((a, s) => a + words(s.say), 0);
+  return `
+    <div class="row" style="margin-bottom:12px">
+      ${p.approved ? `<span class="chip ok">✓ Approved</span>` : `<button class="accent" onclick="approve()" ${p.busy ? "disabled" : ""}>Approve script</button>`}
+      <button onclick="saveTimeline()" ${p.busy ? "disabled" : ""}>Save edits</button>
+      ${p.approved ? `<button class="primary" onclick="run(${JSON.stringify(["voice","sync","render","checks","copy"]).replace(/"/g, "'")})" ${p.busy ? "disabled" : ""}>${p.done?.render ? "Rebuild the video" : "Make the video"}</button>` : ""}
+      <button class="small" onclick="if(confirm('Write a new script from scratch?')) run(['script'])" ${p.busy ? "disabled" : ""}>Rewrite script</button>
+      <span class="muted">${tl.scenes.length} scenes · ${total} words · about ${Math.round(total / 2.45)} s · keyword <b>${esc(tl.keyword)}</b></span>
+    </div>
+    <div class="row" style="margin-bottom:12px"><label style="margin:0">Write for</label>
+      <select style="width:auto" onchange="setAudience(this.value)" ${p.busy ? "disabled" : ""}>${audOptions(p.audience || "mixed")}</select>
+      <label style="margin:0 0 0 8px">Visual style</label>
+      <select style="width:auto" onchange="setVisual(this.value)" ${p.busy ? "disabled" : ""}>${opts(VIS, p.visual || "whiteboard")}</select>
+      <span class="muted" style="font-size:13px">used by “Rewrite script”, ↻ Rewrite scene and ↻ New visual</span></div>
+    <div class="row" style="margin-bottom:12px">${skillRow(p)}</div>
+    <div class="note ${j.score >= 7 ? "" : "warn"}" style="margin-bottom:12px"><b>Hook score: ${j.score ?? "?"}/10.</b> ${esc(j.reason || "")}
+      ${j.rewrite ? `<br><span class="muted">Rewritten. Original: “${esc(j.original?.say)}”</span>` : ""}</div>
+    ${p.factsToCheck?.length ? `<div class="note warn" style="margin-bottom:12px"><b>Facts to verify:</b><ul style="margin:4px 0 0 18px;padding:0">${p.factsToCheck.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
+    <label>Title</label><input type="text" id="tlTitle" value="${esc(tl.title)}" oninput="dirty=true">
+    <label>Comment keyword</label><input type="text" id="tlKeyword" value="${esc(tl.keyword)}" oninput="dirty=true" style="max-width:220px">
+    <div style="margin-top:14px">${tl.scenes.map((s, i) => {
+      const { say, dur, type, ...props } = s;
+      return `<div class="scene"><div class="meta"><b>${i + 1} · ${esc(type)}</b><small>${dur ? dur.toFixed(2) + " s" : ""}</small>
+          <small id="wc${i}">${words(say)} words · ~${(words(say) / 2.45).toFixed(1)} s</small>
+          <input type="text" id="ins${i}" placeholder="what to change? (optional)" style="font-size:12.5px;padding:5px 8px;margin-top:10px">
+          <button class="small" style="margin-top:6px" onclick="rewriteScene(${i})" ${p.busy ? "disabled" : ""}>↻ Rewrite scene</button></div>
+        <div><label style="margin-top:0">What I say</label><textarea rows="4" id="say${i}" oninput="dirty=true;document.getElementById('wc${i}').textContent=words(this.value)+' words · ~'+(words(this.value)/2.45).toFixed(1)+' s'">${esc(say)}</textarea></div>
+        <div><label style="margin-top:0">On screen</label><textarea rows="4" class="mono" id="props${i}" oninput="dirty=true">${esc(JSON.stringify(props, null, 1))}</textarea></div></div>`;
+    }).join("")}</div>`;
+}
+function collectTimeline() {
+  const tl = structuredClone(PROJ.timeline);
+  tl.title = $("#tlTitle").value; tl.keyword = $("#tlKeyword").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  tl.scenes = tl.scenes.map((s, i) => {
+    let props; try { props = JSON.parse($(`#props${i}`).value); } catch { throw new Error(`Scene ${i + 1}: "On screen" is not valid JSON`); }
+    const sc = { type: s.type, ...props, say: $(`#say${i}`).value, dur: s.dur };
+    if (sc.type === "cta") sc.word = tl.keyword;
+    return sc;
+  });
+  return tl;
+}
+async function saveTimeline() {
+  let tl; try { tl = collectTimeline(); } catch (e) { return alert(e.message); }
+  PROJ = await api("PUT", `/api/projects/${DAY}/timeline`, { timeline: tl }); dirty = false; render();
+}
+async function approve() { if (dirty) await saveTimeline(); PROJ = await api("POST", `/api/projects/${DAY}/approve`); render(); loadState(); }
+async function setAudience(a) { if (dirty) await saveTimeline(); PROJ = await api("POST", `/api/projects/${DAY}/audience`, { audience: a }); render(); }
+async function rewriteScene(i) {
+  if (PROJ.approved && !confirm(`Claude will rewrite scene ${i + 1}. The script goes back to review and you approve it again. Continue?`)) return;
+  const instruction = $(`#ins${i}`).value;
+  if (dirty) await saveTimeline();
+  PROJ = await api("POST", `/api/projects/${DAY}/rewrite-scene`, { index: i, instruction }); render(); refresh();
+}
+const stopBtn = () => `<button class="small" style="border-color:var(--bad);color:var(--bad)" onclick="stopJob()" title="Stop the running job; finished scenes are kept">■ Stop</button>`;
+async function stopJob() { PROJ = await api("POST", `/api/projects/${DAY}/stop`); render(); refresh(); }
+async function cutVoice(i) {
+  const from = parseFloat($(`#cf${i}`).value), to = parseFloat($(`#ct${i}`).value);
+  if (!(from >= 0) || !(to > from)) return alert("Type 'from' and 'to' in seconds, with 'to' after 'from'.");
+  if (!confirm(`Cut ${from}–${to} s out of scene ${i + 1}? This changes the clip (a ↻ New take makes a fresh one).`)) return;
+  PROJ = await api("POST", `/api/projects/${DAY}/cut-voice`, { index: i, from, to }); render(); refresh();
+}
+async function redoVoice(i) { PROJ = await api("POST", `/api/projects/${DAY}/redo-voice`, { index: i }); render(); refresh(); }
+async function run(steps) { if (dirty) await saveTimeline(); PROJ = await api("POST", `/api/projects/${DAY}/run`, { steps }); render(); refresh(); }
+
+// ---------------- media: my real images (drop, upload, link, Ctrl+V); click an image to mark spots for arrows
+let MEDIA_BUSY = "";
+function tabMedia() {
+  const p = PROJ, items = p.media || [];
+  return `${MEDIA_BUSY ? `<div class="note" style="margin-bottom:10px">⏳ ${esc(MEDIA_BUSY)}</div>` : ""}${suggestSection(p)}<h3 style="font-size:22px;margin:14px 0 8px">My images &amp; videos</h3>
+    <div class="note" style="border:2px dashed var(--accent);text-align:center;padding:26px;cursor:pointer" onclick="$('#mFile').click()"
+      ondragover="event.preventDefault();this.style.background='#E9E3F5'" ondragleave="this.style.background=''" ondrop="dropMedia(event)">
+      <b>Drop images or videos here</b> or click to choose · or press <b>Ctrl+V</b> to paste a screenshot<br><span class="muted">Images: PNG, JPEG or WebP, up to 15 MB · Videos: MP4, MOV, WebM or MKV, up to 500 MB (first 3 minutes, played silently: your voice stays the sound)</span></div>
+    <input type="file" id="mFile" accept="image/png,image/jpeg,image/webp,video/*,.mkv" multiple class="hidden" onchange="uploadMedia([...this.files])">
+    <div class="row" style="margin:10px 0"><input type="text" id="mUrl" placeholder="…or paste an image link (https://…)" style="flex:2;min-width:200px">
+      <input type="text" id="mUrlNote" placeholder="what is it? e.g. Docker logo" style="flex:1;min-width:140px"><button onclick="addMediaLink()" ${p.busy ? "disabled" : ""}>Add link</button></div>
+    <div class="row" style="margin-bottom:14px"><button class="accent" onclick="placeMedia()" ${!items.length || !p.timeline || p.busy ? "disabled" : ""}>✨ Place my images & videos in the script</button>
+      ${p.busy ? stopBtn() : `<span class="muted" style="font-size:13px">Claude picks the scenes. Write a short “What is it?” and click spots on screenshots first, so arrows know where to point.</span>`}</div>
+    ${items.map((m, i) => mediaCard(p, m, i)).join("") || `<p class="muted">No images yet. Images you add here are also used by “Rewrite script” and ↻ New visual.</p>`}`;
+}
+function mediaCard(p, m, i) {
+  const used = (p.timeline?.scenes || []).map((s, k) => s.media === m.id || s.logo === m.id ? k + 1 : 0).filter(Boolean);
+  return `<div class="scene" style="grid-template-columns:260px 1fr">
+    <div style="position:relative;line-height:0;align-self:start">
+      <img src="/files/${p.day}/${m.poster || m.file}" title="Click to mark a spot for an arrow${m.video ? " (on the first frame)" : ""}" style="width:260px;border-radius:8px;border:1px solid var(--line);cursor:crosshair" onclick="addSpot(event,${i})">
+      ${m.spots.map((s, k) => `<span title="${esc(s.name)}" style="position:absolute;left:${s.x * 100}%;top:${s.y * 100}%;transform:translate(-50%,-50%);min-width:18px;height:18px;border-radius:9px;background:var(--accent-ink);color:#fff;border:2px solid #fff;font:700 11px/14px DM Sans,sans-serif;text-align:center">${k + 1}</span>`).join("")}
+      ${m.video ? `<span style="position:absolute;left:8px;top:8px;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:3px 7px;font:600 12px/16px DM Sans,sans-serif">▶ video · ${m.dur.toFixed(1)} s</span>` : ""}
+    </div>
+    <div>
+      <b>${esc(m.id)}</b> <span class="muted" style="font-size:13px">${m.w}×${m.h}${m.w < 700 && m.kind !== "logo" ? ` · <span style="color:var(--bad)">small, may look blurry</span>` : ""}${used.length ? ` · used in scene ${used.join(", ")}` : ""}</span>
+      <label>What is it? (Claude reads this)</label><input type="text" value="${esc(m.note)}" onchange="PROJ.media[${i}].note=this.value;saveMedia()">
+      <label>Kind</label><select style="width:auto" onchange="PROJ.media[${i}].kind=this.value;saveMedia()">${(m.video ? ["screen recording", "clip"] : ["screenshot", "photo", "diagram", "logo"]).map(k => `<option ${m.kind === k ? "selected" : ""}>${k}</option>`).join("")}</select>
+      ${m.video ? `<label>Start playing at (seconds) · plays ${(m.dur - (m.start || 0)).toFixed(1)} s, then holds its last frame</label>
+      <div class="row"><input type="number" min="0" max="${Math.max(0, m.dur - 0.5).toFixed(1)}" step="0.5" value="${m.start || 0}" style="width:110px" onchange="PROJ.media[${i}].start=+this.value;saveMedia()">
+        <a href="/files/${p.day}/${m.file}" target="_blank" style="font-size:13px">▶ Play the video</a></div>` : ""}
+      <label>Spots for arrows (click the image to add one)</label>
+      <div class="row">${m.spots.map((s, k) => `<span class="chip">${k + 1} · ${esc(s.name)} <a href="#" onclick="PROJ.media[${i}].spots.splice(${k},1);saveMedia();return false" title="remove">✕</a></span>`).join("") || `<span class="muted" style="font-size:13px">none yet</span>`}</div>
+      <div class="row" style="margin-top:10px"><span class="muted" style="font-size:12px;word-break:break-all">${m.source === "upload" ? "uploaded" : `from ${esc(m.source)}`}</span><span style="flex:1"></span>
+        <button class="small" onclick="if(confirm('Remove this ${m.video ? "video" : "image"}?')){PROJ.media.splice(${i},1);saveMedia()}" ${p.busy ? "disabled" : ""}>Remove</button></div>
+    </div></div>`;
+}
+async function saveMedia() { PROJ = await api("PUT", `/api/projects/${DAY}/media`, { items: PROJ.media }); render(); }
+async function uploadMedia(files) {
+  const forS = SUGG_FOR && (PROJ.suggestions || []).find(x => x.id === SUGG_FOR); SUGG_FOR = null;
+  for (const f of files) {
+    const video = f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|mkv)$/i.test(f.name || "");
+    if (!video && !/^image\/(png|jpeg|webp)$/.test(f.type)) { alert(`${f.name || "That file"}: only PNG, JPEG, WebP or a video.`); continue; }
+    if (video) { MEDIA_BUSY = `Uploading and preparing ${f.name} (a big video can take a minute)…`; render(); }
+    try { PROJ = await api("POST", `/api/projects/${DAY}/${video ? "media-video" : "media"}?name=${encodeURIComponent(f.name || "pasted.png")}${forS ? "&note=" + encodeURIComponent(forS.what) : ""}`, f, true);
+      if (forS) PROJ = await api("POST", `/api/projects/${DAY}/suggest-status`, { id: forS.id, status: "used", mediaId: PROJ.media.at(-1).id }); }
+    finally { MEDIA_BUSY = ""; }
+  }
+  render();
+}
+function dropMedia(e) {
+  e.preventDefault(); e.currentTarget.style.background = "";
+  const files = [...e.dataTransfer.files];
+  if (files.length) return uploadMedia(files);
+  const link = (e.dataTransfer.getData("text/uri-list") || "").split("\n")[0].trim();     // an image dragged from a web page
+  if (link) { $("#mUrl").value = link; addMediaLink(); }
+}
+async function addMediaLink() {
+  const url = $("#mUrl").value.trim(); if (!url) return;
+  PROJ = await api("POST", `/api/projects/${DAY}/media-link`, { url, note: $("#mUrlNote").value.trim() }); render();
+}
+function addSpot(e, i) {
+  const r = e.target.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  const name = prompt("Name this spot (what the arrow points at), e.g. Run button:");
+  if (!name || !name.trim()) return;
+  PROJ.media[i].spots.push({ name: name.trim(), x, y }); saveMedia();
+}
+async function placeMedia() {
+  if (PROJ.approved && !confirm("Claude will put your images into the scenes that fit. Your words and voice stay; you approve again before rendering. Continue?")) return;
+  PROJ = await api("POST", `/api/projects/${DAY}/place-media`); render(); refresh();
+}
+document.addEventListener("paste", e => {                                   // Ctrl+V a screenshot on the Media tab
+  if (TAB !== "media" || DAY == null || /INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+  const files = [...(e.clipboardData?.items || [])].filter(it => it.type.startsWith("image/")).map(it => it.getAsFile()).filter(Boolean);
+  if (files.length) { e.preventDefault(); uploadMedia(files.map(f => new File([f], `screenshot-${Date.now()}.png`, { type: f.type }))); }
+});
+
+// ---------------- 2. voice
+let mediaRec = null, chunks = [];
+function tabVoice() {
+  const p = PROJ, clone = p.voiceMode !== "recording";
+  const rep = p.voiceReport || [];
+  return `
+    <div class="row" style="margin-bottom:12px">
+      <label class="row" style="margin:0;color:var(--ink)"><input type="radio" name="vm" ${clone ? "checked" : ""} onchange="setMode('clone')"> AI clone of my voice</label>
+      <label class="row" style="margin:0;color:var(--ink)"><input type="radio" name="vm" ${!clone ? "checked" : ""} onchange="setMode('recording')"> My own recording</label>
+    </div>
+    ${!p.approved ? `<div class="note warn">Approve the script first. Nothing is voiced before approval.</div>` : ""}
+    ${clone ? `
+      <div class="note ${STATE.setup.reference ? "" : "bad"}">${STATE.setup.reference ? "Reference clip ready." : "No reference clip yet: open Settings and record 10 seconds."}
+        Every clip is length-checked and read back with Whisper; a mismatch is regenerated once, then flagged here.</div>
+      <div class="row" style="margin:12px 0"><button class="primary" onclick="run(['voice','sync'])" ${!p.approved || p.busy ? "disabled" : ""}>Generate voice only</button>
+        ${p.busy ? stopBtn() : `<span class="muted">or use “Make the video” on the Script tab to do everything.</span>`}</div>` : `
+      <div class="note">Record the whole script in one go. Made a mistake? Pause one second and say the whole sentence again. Mistakes and old takes are cut automatically (free, on your laptop).</div>
+      <div class="row" style="margin:12px 0"><button id="recVoiceBtn" onclick="toggleRecording()">● Record in the browser</button>
+        <label class="row" style="margin:0"><input type="file" accept="audio/*" onchange="uploadRecording(this.files[0])"> or upload a file</label>
+        ${p.files.recording ? `<span class="chip ok">✓ ${esc(p.files.recording)}</span>` : ""}</div>
+      <div class="row"><button class="primary" onclick="run(['voice','sync'])" ${!p.approved || p.busy || !p.files.recording ? "disabled" : ""}>Clean my recording</button>${p.busy ? stopBtn() : ""}</div>
+      ${p.files.recording ? `<audio controls style="width:100%;margin-top:8px" src="/files/${p.day}/${p.files.recording}?v=${Date.now()}"></audio>` : ""}
+      ${p.editReport ? `<details style="margin-top:10px"><summary>Edit report (what was kept and cut)</summary><pre style="white-space:pre-wrap;font-size:12px">${esc(p.editReport)}</pre></details>` : ""}`}
+    ${p.files.voice ? `<h3 style="font-size:20px;margin-top:14px">Clean voice</h3><audio controls style="width:100%" src="/files/${p.day}/voice.wav?v=${Date.now()}"></audio>` : ""}
+    ${clone && rep.length ? `<h3 style="font-size:20px;margin-top:14px">Clips</h3><table><tr><th>Scene</th><th>Length</th><th>Read-back</th><th>Status</th><th>Listen</th><th></th><th>✂ Cut a part out (seconds)</th></tr>
+      ${rep.map(r => `<tr><td>${r.scene + 1}</td><td>${r.duration ? r.duration.toFixed(1) + " s" : "–"}</td><td>${r.match ?? "–"}</td>
+        <td class="tag ${r.status === "flagged" ? "warn" : "ok"}">${esc(r.status)}${r.why ? `<div class="muted" style="text-transform:none;font-weight:400">${esc(r.why)}</div>` : ""}</td>
+        <td>${r.duration ? `<audio controls preload="none" style="height:30px" src="/files/${p.day}/clips/s${String(r.scene).padStart(2, "0")}.wav?v=${Date.now()}"></audio>` : ""}</td>
+        <td>${r.duration ? `<button class="small" onclick="redoVoice(${r.scene})" ${!p.approved || p.busy ? "disabled" : ""} title="Generate this scene again; the others stay">↻ New take</button>` : ""}</td>
+        <td>${r.duration ? `<div class="row" style="flex-wrap:nowrap;gap:4px"><input type="number" id="cf${r.scene}" min="0" step="0.1" placeholder="from" style="width:66px;padding:4px 6px">
+          <input type="number" id="ct${r.scene}" min="0" step="0.1" placeholder="to" style="width:66px;padding:4px 6px">
+          <button class="small" onclick="cutVoice(${r.scene})" ${!p.approved || p.busy ? "disabled" : ""}>✂ Cut</button></div>` : ""}</td></tr>`).join("")}</table>
+      <p class="muted" style="font-size:13px">Hear a long gap? Play the clip, note where it starts and ends (the player shows the time), type both and press ✂ Cut. Long pauses are also shortened automatically (Settings → Longest pause).</p>` : ""}`;
+}
+async function setMode(m) { PROJ = await api("POST", `/api/projects/${DAY}/voice-mode`, { mode: m }); render(); }
+async function uploadRecording(file) {
+  if (!file) return;
+  const ext = (file.name.split(".").pop() || "m4a").toLowerCase();
+  PROJ = await api("POST", `/api/projects/${DAY}/recording?ext=${ext}`, file, true); render();
+}
+async function toggleRecording() {
+  const btn = $("#recVoiceBtn");
+  if (mediaRec) { mediaRec.stop(); return; }
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } });
+  chunks = []; mediaRec = new MediaRecorder(stream);
+  mediaRec.ondataavailable = e => chunks.push(e.data);
+  mediaRec.onstop = async () => { stream.getTracks().forEach(t => t.stop()); mediaRec = null;
+    PROJ = await api("POST", `/api/projects/${DAY}/recording?ext=webm`, new Blob(chunks, { type: "audio/webm" }), true); render(); };
+  mediaRec.start(); btn.textContent = "■ Stop recording"; btn.classList.add("accent");
+}
+
+// ---------------- 3. video: live preview (HTML + voice) first, then the real render
+const PV = { audio: new Audio(), raf: 0, src: "" };
+function pvStarts() { let t = 0; return PROJ.timeline.scenes.map(s => { const a = t; t += s.dur || 3; return a; }); }
+function pvStop() { cancelAnimationFrame(PV.raf); PV.raf = 0; PV.audio.pause(); for (const id of ["#pvBtn", "#gvBtn"]) { const b = $(id); if (b) b.textContent = "▶ Play all"; } }
+async function pvPlay(i, fid = "pv", bid = "pvBtn", tid = "pvTime") {
+  const fr = $("#" + fid)?.contentWindow;
+  if (!fr?.render) return;
+  if (PV.raf && i < 0) return pvStop();                       // Play all doubles as pause
+  pvStop();
+  const sc = PROJ.timeline.scenes, st = pvStarts(), total = st.at(-1) + (sc.at(-1).dur || 3);
+  const a = i < 0 ? 0 : st[i], b = i < 0 ? total : st[i] + (sc[i].dur || 3), voice = PROJ.files.voice;
+  if (voice) {
+    const src = `/files/${DAY}/voice.wav?v=${encodeURIComponent(PROJ.done?.sync || "")}`;
+    if (PV.src !== src) { PV.audio.src = PV.src = src; await new Promise(r => { PV.audio.onloadedmetadata = r; PV.audio.load(); }); }
+    PV.audio.currentTime = a; await PV.audio.play().catch(() => {});
+  }
+  const t0 = performance.now();
+  if (i < 0) $("#" + bid).textContent = "❚❚ Pause";
+  const frame = () => {
+    const t = voice ? PV.audio.currentTime : a + (performance.now() - t0) / 1000;
+    fr.render(Math.min(t, total - 0.001));
+    const k = st.filter(s => s <= t).length;
+    document.querySelectorAll(`[data-pv="${fid}"]`).forEach(el => el.classList.toggle("on", +el.dataset.i === k - 1));
+    $("#" + tid).textContent = `${t.toFixed(1)} s · scene ${k}`;
+    if (t >= b) return pvStop();
+    PV.raf = requestAnimationFrame(frame);
+  };
+  PV.raf = requestAnimationFrame(frame);
+}
+async function setVisual(v) { if (dirty) await saveTimeline(); PROJ = await api("POST", `/api/projects/${DAY}/visual-style`, { visual: v }); render(); }
+async function newVisual(i) {
+  if (PROJ.approved && !confirm(`Claude will design a new visual for scene ${i + 1}. Your words and voice stay; you approve again before rendering. Continue?`)) return;
+  PROJ = await api("POST", `/api/projects/${DAY}/visual-scene`, { index: i, instruction: $(`#vis${i}`).value }); render(); refresh();
+}
+function versionNav(p, i) {
+  const h = p.visualVersions?.[i];
+  if (!h || h.list.length < 2) return "";
+  return `<div class="row" style="margin-top:6px">
+    <button class="small" onclick="pickVersion(${i},${h.at - 1})" ${h.at <= 0 || p.busy ? "disabled" : ""}>◀ Previous</button>
+    <span class="muted" style="font-size:13px">version ${h.at + 1} of ${h.list.length}${h.at === 0 ? " (original)" : ""}</span>
+    <button class="small" onclick="pickVersion(${i},${h.at + 1})" ${h.at >= h.list.length - 1 || p.busy ? "disabled" : ""}>Next ▶</button></div>`;
+}
+// ---- Studio film: Claude Code makes a full custom film with a pulled skill, on my approved script and voice
+function studioSection(p) {
+  const able = (STATE.skills || []).filter(s => s.studio), films = Object.values(p.studioFilms || {});
+  if (!able.length) return "";
+  const cur = skill(p.skill || "whiteboard").studio ? p.skill : able[0].id;
+  return `<h3 style="font-size:22px;margin-top:6px">3 · Studio film <span class="muted" style="font-family:inherit;font-size:14px">optional, a full custom film by Claude Code</span></h3>
+    <div class="note" style="font-size:13px;margin:6px 0">Claude Code builds the whole film in the chosen skill's own way, on your approved script and synced voice, with tools on, but only inside
+      <code>work/studio/</code>. It takes 30–120 minutes and uses a lot of your Claude usage. Your normal render stays; pick which one to export.</div>
+    <div class="row" style="margin-bottom:10px"><select id="stSkill" style="width:auto" onchange="$('#stStyle').classList.toggle('hidden', this.value !== 'lemo')">${able.map(s => `<option value="${s.id}" ${s.id === cur ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select>
+      <select id="stStyle" class="${cur === "lemo" ? "" : "hidden"}" style="width:auto"><option value="">Lemo style: Claude picks</option>${(STATE.lemoStyles || []).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>
+      <button onclick="studio()" ${p.busy || !p.approved || !p.files.voice ? "disabled" : ""}>🎬 Make Studio film</button>
+      ${!p.files.voice ? `<span class="muted" style="font-size:13px">needs the voice first</span>` : ""}</div>
+    ${films.map(f => `<div class="row" style="margin-bottom:8px"><video controls style="max-width:220px" src="/files/${p.day}/build/${f.file}?v=${encodeURIComponent(f.at)}"></video>
+      <div><b>${esc(skill(f.skill).name)}${f.style ? " · " + esc(f.style) : ""}</b><br><span class="muted" style="font-size:13px">${f.len.toFixed(1)} s${Math.abs(f.off) > 0.15 ? ` · off by ${f.off.toFixed(2)} s` : " · matches the voice"}</span><br>
+      ${p.finalFile === f.file ? `<span class="chip ok">✓ exported as final</span> <button class="small" onclick="useFinal('')">Use the rendered video</button>` : `<button class="small" onclick="useFinal('${f.file}')">Use as final</button>`}</div></div>`).join("")}`;
+}
+async function studio() {
+  const id = $("#stSkill").value, s = skill(id);
+  if (!confirm(`Make a Studio film with ${s.name}?\n\nClaude Code will run with tools inside work/studio/ for 30–120 minutes and use a lot of your Claude usage.${s.licenceNote ? "\n\n" + s.licenceNote : ""}`)) return;
+  PROJ = await api("POST", `/api/projects/${DAY}/studio`, { skill: id, style: $("#stStyle").value }); render(); refresh();
+}
+async function useFinal(file) { PROJ = await api("POST", `/api/projects/${DAY}/use-final`, { file }); render(); }
+function brollButtons(p, i) {
+  const a = p.art?.[i] || {}, dis = p.busy || !p.approved ? "disabled" : "";
+  return `${a.still ? `<a href="/files/${p.day}/art/${a.key}/still.png" target="_blank"><img src="/files/${p.day}/art/${a.key}/still.png?v=${encodeURIComponent(p.updatedAt || "")}" style="height:64px;border-radius:6px;vertical-align:middle"></a>` : ""}
+    <button class="small" onclick="broll(${i},'still')" ${dis} title="Gemini image: a paper-collage still of the metaphor (paid)">🖼 ${a.still ? "↻ Still" : "Make still"}</button>
+    ${a.still ? `<button class="small" onclick="broll(${i},'animate')" ${dis} title="Gemini video: the still assembles from an empty colour field (paid, a few minutes)">🎬 ${a.clip ? "↻ Animate" : "Animate"}</button>` : ""}
+    ${!p.approved ? `<span class="muted" style="font-size:12px">approve first</span>` : ""}`;
+}
+async function broll(i, what) {
+  const s = skill("collage");
+  if (!confirm(`${what === "still" ? "Make a collage still" : "Animate the approved still into a 5-second clip"} with Gemini?\n${s.costNote || ""}`)) return;
+  PROJ = await api("POST", `/api/projects/${DAY}/broll`, { index: i, what }); render(); refresh();
+}
+async function paintScene(i) { PROJ = await api("POST", `/api/projects/${DAY}/paint-scene`, { index: i }); render(); refresh(); }
+async function pickVersion(i, k) { PROJ = await api("POST", `/api/projects/${DAY}/visual-version`, { index: i, version: k }); render(); }
+// ---- version gallery: every visual style × every skill look of the approved script (lib/gallery.js), pick one
+const GV = { day: null, visuals: [], looks: [], sig: "", cur: null };      // what's ticked (per day)
+const short = s => String(s).replace(/\s*\(.*\)\s*$/, "");
+function galleryPlan() {
+  const out = [];
+  for (const visual of Object.keys(VIS)) for (const s of STATE.skills || []) for (const l of s.looks) out.push({ id: `${visual}__${l.id}`, visual, skill: s.id, look: l.id, lookName: l.name });
+  return out;
+}
+function gallerySection(p) {
+  if (!p.approved) return "";
+  return `<h3 style="font-size:22px">★ Versions <span class="muted" style="font-family:inherit;font-size:14px">tick the styles and looks you want; your words and voice stay</span></h3>
+    <div id="gallery" style="margin:8px 0 24px">${galleryInner(p)}</div>`;
+}
+function galleryInner(p) {
+  if (GV.day !== p.day) Object.assign(GV, { day: p.day, visuals: [p.visual || "whiteboard"], looks: [p.look || "whiteboard"], sig: "" });
+  const g = p.gallery, vs = g?.versions || {}, active = g && (g.running || g.waiting), plan = galleryPlan();
+  const want = plan.filter(v => GV.visuals.includes(v.visual) && GV.looks.includes(v.look)), todo = want.filter(v => vs[v.id]?.status !== "ready");
+  const made = plan.filter(v => vs[v.id]?.status === "ready"), failed = want.filter(v => vs[v.id]?.status === "error");
+  const box = (kind, id, label) => `<label class="pick"><input type="checkbox" ${GV[kind].includes(id) ? "checked" : ""} ${active ? "disabled" : ""} onchange="gvTick('${kind}','${id}',this.checked)">${esc(label)}</label>`;
+  return `<div class="card" style="padding:12px 14px">
+      <div class="pickrow"><b class="pickhead">Styles</b><span>${Object.entries(VIS).map(([k, l]) => box("visuals", k, short(l))).join("")}</span></div>
+      ${(STATE.skills || []).map(s => `<div class="pickrow"><b class="pickhead">${esc(s.name)}</b><span>${s.looks.map(l => box("looks", l.id, short(l.name))).join("")}</span></div>`).join("")}
+      <div class="row" style="margin-top:10px">${active
+        ? `<span class="busy">${g.waiting ? "waiting for the Day's job…" : esc(g.current || "working…")}</span><button class="small" onclick="galleryStop()">■ Stop</button>`
+        : `<button class="accent" onclick="galleryMake()" ${todo.length ? "" : "disabled"}>${todo.length ? `Make ${todo.length} version${todo.length === 1 ? "" : "s"}` : want.length ? "All ticked versions are made" : "Tick a style and a look"}</button>
+           ${todo.length ? `<span class="muted" style="font-size:13px">about a minute each${want.length > todo.length ? ` · ${want.length - todo.length} already made` : ""}</span>` : ""}`}</div>
+      ${failed.length ? `<div style="color:var(--bad);font-size:13px;margin-top:6px">✗ ${failed.map(v => `${esc(short(VIS[v.visual]))} · ${esc(short(v.lookName))}: ${esc((vs[v.id].error || "").slice(0, 120))}`).join("<br>✗ ")}</div>` : ""}
+      ${g?.status === "error" ? `<div style="color:var(--bad);font-size:13px;margin-top:6px">✗ ${esc(g.error)}</div>` : ""}
+    </div>
+    ${made.length ? `<div class="row" style="margin-top:10px"><b>Made:</b>${made.map(v => `<button class="small ${p.pickedVersion === v.id ? "accent" : ""}" onclick="galleryOpen('${v.id}')" title="Play it with your voice">▶ ${esc(short(VIS[v.visual]))} · ${esc(short(v.lookName))}${p.pickedVersion === v.id ? " ✓" : ""}</button>`).join("")}</div>` : ""}`;
+}
+function gvTick(kind, id, on) { GV[kind] = on ? [...new Set([...GV[kind], id])] : GV[kind].filter(x => x !== id); GV.sig = ""; galleryPaint(); }
+async function galleryMake() {
+  PROJ = await api("POST", `/api/projects/${DAY}/gallery`, { visuals: GV.visuals, looks: GV.looks }); GV.sig = ""; render(); refresh();
+}
+function gallerySig(p) { const g = p.gallery; return g ? JSON.stringify([g.status, g.current, g.running, g.waiting, Object.values(g.versions || {}).map(v => v.status), p.pickedVersion, p.busy]) : ""; }
+function galleryPaint() { const el = $("#gallery"); if (!el) return; const sig = gallerySig(PROJ) + GV.visuals + "|" + GV.looks; if (sig === GV.sig) return; GV.sig = sig; el.innerHTML = galleryInner(PROJ); }
+async function galleryStop() { PROJ = await api("POST", `/api/projects/${DAY}/gallery-stop`); GV.sig = ""; render(); }
+async function galleryUse(id) {
+  const v = galleryPlan().find(x => x.id === id);
+  if (!confirm(`Use “${VIS[v.visual]} · ${skill(v.skill).name} · ${v.lookName}” for this reel?\n\nIts screens become the reel (you approve them by picking), your words and voice stay, and the final video is rendered at full quality (about 7 minutes).`)) return;
+  if (gvDlg.open) gvDlg.close();
+  PROJ = await api("POST", `/api/projects/${DAY}/use-version`, { id }); GV.sig = ""; render(); refresh();
+}
+function galleryOpen(id) {
+  const v = galleryPlan().find(x => x.id === id), st = PROJ.gallery?.versions?.[id], d = PROJ.gallery?.designs?.[v.design] || {};
+  const sc = PROJ.timeline.scenes, types = d.types || sc.map(x => x.type), n = sc.length;
+  // each scene's last frame, cut from the version's picture strip (tiles of 216×384 with 6 px gaps), shown at 116×206
+  const k = 116 / 216, strip = `/files/${PROJ.day}/variants/${id}/build/strip.jpg?v=${encodeURIComponent(st.at)}`, W = (n * 216 + (n - 1) * 6) * k;
+  GV.cur = id; pvStop();
+  $("#gvBody").innerHTML = `<div class="row"><h2 style="font-size:26px">${esc(short(VIS[v.visual]))} · ${esc(skill(v.skill).name)} · ${esc(short(v.lookName))}</h2><span style="flex:1"></span>
+      ${PROJ.pickedVersion === id ? `<span class="chip ok">✓ in use</span>` : `<button class="accent" onclick="galleryUse('${id}')" ${PROJ.busy ? "disabled" : ""}>Use this version</button>`}
+      <button class="small" onclick="pvStop();gvDlg.close()">Close</button></div>
+    <div style="display:grid;grid-template-columns:324px 1fr;gap:18px;margin-top:10px;align-items:start">
+      <div><div style="width:324px;height:576px;overflow:hidden;border-radius:14px;border:1px solid var(--line);background:#fff">
+          <iframe id="gv" src="/files/${PROJ.day}/variants/${id}/build/preview.html?v=${encodeURIComponent(st.at)}#render" style="width:1080px;height:1920px;border:0;transform:scale(.3);transform-origin:0 0"></iframe></div>
+        <div class="row" style="margin-top:8px"><button id="gvBtn" onclick="pvPlay(-1,'gv','gvBtn','gvTime')">▶ Play all</button><span id="gvTime" class="muted"></span></div>
+        <p class="muted" style="font-size:12.5px;margin:6px 0 0">With your voice, frame-exact: the final MP4 is made from this same page at 60 fps.${st.mp4 ? ` <a href="/files/${PROJ.day}/variants/${id}/build/final.mp4" target="_blank">Its MP4</a>` : ""}${d.facts?.length ? `<br><span style="color:var(--warn)" title="${esc(d.facts.join("\n"))}">⚠ ${d.facts.length} fact(s) to check</span>` : ""}</p></div>
+      <div><div class="muted" style="font-size:13px;margin-bottom:6px">${n} scenes · click one to play it</div>
+        <div class="thumbs">${sc.map((s, i) => `<div class="thumb" data-pv="gv" data-i="${i}" onclick="pvPlay(${i},'gv','gvBtn','gvTime')" title="${esc(s.say)}">
+          <div class="pic" style="background-image:url('${strip}');background-size:${W.toFixed(1)}px 206px;background-position:-${(i * 222 * k).toFixed(1)}px 0"><span>${i + 1}</span></div>
+          <b>${esc(types[i] || s.type)}</b> · ${(s.dur || 0).toFixed(1)} s<div class="say">${esc(s.say)}</div></div>`).join("")}</div></div></div>`;
+  gvDlg.showModal();
+}
+
+// ---- image suggestions (lib/suggest.js): what picture would help each scene, and where it can come from
+let SUGG_FOR = null;
+function suggestSection(p) {
+  const all = p.suggestions || [], open = all.filter(s => s.status === "open"), used = all.filter(s => s.status === "used");
+  const gem = skill("collage") && (STATE.skillStatus || []).find(x => x.id === "collage")?.needs?.GEMINI_API_KEY;
+  return `<div class="row" style="margin:4px 0 10px"><h3 style="font-size:22px">💡 Suggested images</h3>
+      <button class="small" onclick="run(['suggest'])" ${!p.approved || p.busy ? "disabled" : ""}>${all.length ? "↻ Suggest again" : "Suggest images"}</button>
+      <span class="muted" style="font-size:13px">${p.approved ? "Claude says which scenes want a real picture. Take one, upload a better one, or skip." : "Comes after you approve the script."}</span></div>
+    ${open.map(s => `<div class="sugg"><div class="row" style="justify-content:space-between"><div><b>Scene ${s.scene}</b> · <span class="chip">${esc(s.kind)}</span> ${esc(s.what)}
+        ${s.why ? `<br><span class="muted" style="font-size:13px">${esc(s.why)}</span>` : ""}</div>
+      <div class="row"><button class="small" onclick="suggestUpload('${s.id}')" title="Upload your own picture for this">⬆ Upload mine</button>
+        ${!["logo", "screenshot"].includes(s.kind) ? `<button class="small" onclick="suggestGen('${s.id}')" ${p.busy || !gem ? "disabled" : ""} title="${gem ? "A Gemini illustration (paid, about $0.04)" : "Needs GEMINI_API_KEY in .env"}">🖼 Generate</button>` : ""}
+        <button class="small" onclick="suggestStatus('${s.id}','skipped')">Skip</button></div></div>
+      ${s.candidates?.length ? `<div class="cands">${s.candidates.map((c, k) => `<div class="cand"><a href="${esc(c.page)}" target="_blank" title="${esc(c.title)}"><img loading="lazy" src="${esc(c.thumb)}"></a>
+        ${esc(c.licence)} · ${esc(c.artist.slice(0, 28))}<br><button class="small" style="margin-top:3px" onclick="suggestUse('${s.id}',${k})" ${p.busy ? "disabled" : ""}>Use this</button></div>`).join("")}</div>`
+        : s.source === "commons" || s.kind === "logo" ? `<div class="muted" style="font-size:13px;margin-top:6px">${s.searchError ? "Search failed: " + esc(s.searchError) : "No free-licensed match on Wikimedia Commons: upload one."}</div>` : ""}
+      ${s.kind === "screenshot" ? `<div class="muted" style="font-size:12.5px;margin-top:6px">Take this screenshot yourself (Win+Shift+S), then press Ctrl+V here or ⬆ Upload mine.</div>` : ""}</div>`).join("")}
+    ${used.length ? `<p class="muted" style="font-size:13px">✓ Taken: ${used.map(s => `scene ${s.scene} → <b>${esc(s.mediaId || "")}</b>`).join(", ")}. Press ✨ Place to put them into the scenes.</p>` : ""}
+    ${all.length && !open.length && !used.length ? `<p class="muted" style="font-size:13px">All suggestions skipped.</p>` : ""}`;
+}
+async function suggestUse(id, k) { PROJ = await api("POST", `/api/projects/${DAY}/suggest-use`, { id, k }); render(); }
+async function suggestStatus(id, status, mediaId) { PROJ = await api("POST", `/api/projects/${DAY}/suggest-status`, { id, status, mediaId }); render(); }
+async function suggestGen(id) {
+  const s = PROJ.suggestions.find(x => x.id === id);
+  if (!confirm(`Generate a picture with Gemini (paid, about $0.04)?\n\n“${s.what}”\n\nIt's marked AI-generated, and the post copy gets an AI note.`)) return;
+  PROJ = await api("POST", `/api/projects/${DAY}/suggest-gen`, { id, aspect: "16:9" }); render(); refresh();
+}
+function suggestUpload(id) { SUGG_FOR = id; $("#mFile").click(); }
+function tabVideo() {
+  const p = PROJ, c = p.checks, v = Date.now(), tl = p.timeline;
+  pvStop();
+  const preview = p.files.preview && tl ? `
+    <div class="grid2" style="margin-bottom:22px"><div>
+      <div style="width:324px;height:576px;overflow:hidden;border-radius:14px;border:1px solid var(--line);background:#fff">
+        <iframe id="pv" src="/files/${p.day}/build/preview.html?v=${encodeURIComponent(p.updatedAt || "")}#render" style="width:1080px;height:1920px;border:0;transform:scale(.3);transform-origin:0 0"></iframe></div>
+      <div class="row" style="margin-top:8px"><button id="pvBtn" onclick="pvPlay(-1)">▶ Play all</button><span id="pvTime" class="muted"></span></div>
+      ${p.files.voice ? `<p class="muted" style="font-size:13px">Plays with your voice, frame-exact.</p>` : `<p class="muted" style="font-size:13px">No voice yet: silent, with estimated timing.</p>`}
+    </div><div>${tl.scenes.map((s, i) => `
+      <div class="scene" style="grid-template-columns:110px 1fr;padding:10px">
+        <div class="meta"><button class="small" onclick="pvPlay(${i})">▶ ${i + 1}</button><small style="margin-top:4px">${esc(s.type)} · ${(s.dur || 0).toFixed(1)} s</small></div>
+        <div><div class="muted" style="font-size:13px;margin-bottom:6px">“${esc(s.say)}”</div>
+          <div class="row"><input type="text" id="vis${i}" placeholder="what to change on screen? (optional)" style="flex:1;min-width:160px;font-size:13px;padding:5px 8px">
+          <button class="small" onclick="newVisual(${i})" ${p.busy ? "disabled" : ""}>↻ New visual</button>
+          ${s.type === "broll" ? brollButtons(p, i) : ""}
+          ${s.type === "clawd" ? `<button class="small" onclick="paintScene(${i})" ${p.busy ? "disabled" : ""}>🎨 ${p.art?.[i]?.clip ? "Repaint" : "Paint"}</button>` : ""}</div>
+          ${versionNav(p, i)}</div></div>`).join("")}
+    </div></div>` : `<p class="muted">${p.busy ? "Working on it…" : "No preview yet: press “Refresh preview”."}</p>`;
+  return `
+    ${gallerySection(p)}
+    <h3 style="font-size:22px">1 · Preview <span class="muted" style="font-family:inherit;font-size:14px">before rendering</span></h3>
+    <div class="row" style="margin:8px 0 12px"><label style="margin:0">Visual style</label>
+      <select style="width:auto" onchange="setVisual(this.value)" ${p.busy ? "disabled" : ""}>${opts(VIS, p.visual || "whiteboard")}</select>
+      ${skillRow(p)}
+      ${tl && tl.scenes.some(s => s.type === "clawd") ? `<button class="small" onclick="run(['paint'])" ${p.busy ? "disabled" : ""} title="Clawd scenes are painted with the Claude Animation Base kit: a few seconds per frame">🎨 Paint Clawd scenes</button>` : ""}
+      <button class="small" onclick="run(['preview'])" ${p.busy || !tl ? "disabled" : ""}>Refresh preview</button>
+      ${!p.approved && tl ? `<button class="accent small" onclick="approve()" ${p.busy ? "disabled" : ""}>Approve script &amp; visuals</button>` : ""}</div>
+    ${preview}
+    ${studioSection(p)}
+    <h3 style="font-size:22px">2 · Rendered video ${p.finalFile ? `<span class="muted" style="font-family:inherit;font-size:14px">(export uses the Studio film ${esc(p.finalFile)})</span>` : ""}</h3>
+    <div class="row" style="margin:8px 0 12px">
+      <button class="primary" onclick="run([${p.voiceMode === "recording" ? "" : "'voice',"}'sync',${tl && tl.scenes.some(s => s.type === "clawd") ? "'paint'," : ""}'render','checks'])" ${!p.files.voice || p.busy || !p.approved ? "disabled" : ""}>Render video</button>
+      ${p.busy ? stopBtn() : `<span class="muted">Only scenes you changed are redrawn.${p.approved ? "" : " Approve first."}</span>`}</div>
+    ${p.files.final ? `<div class="grid2"><div><video controls src="/files/${p.day}/build/final.mp4?v=${v}"></video></div>
+      <div><h3 style="font-size:20px">Automatic checks</h3>
+      ${c ? `<ul class="checks">${c.items.map(i => `<li><span class="tag ${i.level}">${i.level === "ok" ? "✓ ok" : i.level}</span><div><b>${esc(i.name)}</b><div class="muted">${esc(i.detail)}</div></div></li>`).join("")}</ul>` : `<p class="muted">Not checked yet.</p>`}
+      ${p.files.sheet ? `<h3 style="font-size:20px;margin-top:14px">Contact sheet (last frame of every scene)</h3><img class="sheet" src="/files/${p.day}/build/sheet.png?v=${v}">` : ""}</div></div>`
+      : `<p class="muted">${p.busy ? "Working on it…" : "No video yet. Approve the script, then “Make the video”."}</p>`}`;
+}
+
+// ---------------- 4. copy
+function field(id, label, value, limit, rows = 1) {
+  const n = String(value || "").length;
+  return `<label>${label} ${limit ? `<span class="count ${n > limit ? "over" : ""}" id="${id}-n">${n}/${limit}</span>` : ""}</label>
+    ${rows > 1 ? `<textarea id="${id}" rows="${rows}" oninput="cnt('${id}',${limit || 0})">${esc(value)}</textarea>` : `<input type="text" id="${id}" value="${esc(value)}" oninput="cnt('${id}',${limit || 0})">`}
+    <button class="small" style="margin-top:4px" onclick="navigator.clipboard.writeText(document.getElementById('${id}').value)">Copy</button>`;
+}
+function cnt(id, limit) { if (!limit) return; const n = $("#" + id).value.length, e = $(`#${id}-n`); e.textContent = `${n}/${limit}`; e.classList.toggle("over", n > limit); }
+function tabCopy() {
+  const p = PROJ, c = p.copy;
+  if (!c) return `<p class="muted">${p.busy ? "Working on it…" : "Copy is written after the video. Run “Make the video”, or write it now:"}</p>
+    <button onclick="run(['copy'])" ${!p.approved || p.busy ? "disabled" : ""}>Write copy now</button>`;
+  const tags = a => (a || []).join(" ");
+  return `
+    <div class="row"><button class="primary" onclick="saveCopy()">Save copy</button><button class="small" onclick="if(confirm('Write all copy again?')) run(['copy'])" ${p.busy ? "disabled" : ""}>Rewrite</button></div>
+    ${p.copyChecks ? `<ul class="checks" style="margin-top:12px">${p.copyChecks.map(x => `<li><span class="tag ${x.ok ? "ok" : "error"}">${x.ok ? "✓ ok" : "fix"}</span><div><b>${esc(x.name)}</b> <span class="muted">${esc(x.detail)}</span></div></li>`).join("")}</ul>` : ""}
+    <h3 style="font-size:22px;margin-top:16px">YouTube Shorts</h3>
+    ${field("ytTitle", "Title", c.youtube?.title, 60)}
+    ${field("ytDesc", "Description", c.youtube?.description, 5000, 6)}
+    ${field("ytTags", "Hashtags", tags(c.youtube?.hashtags))}
+    <p class="muted" style="font-size:13px">Other titles: ${esc((c.youtube?.alt_titles || []).join(" · "))}</p>
+    <h3 style="font-size:22px;margin-top:16px">Instagram Reels</h3>
+    ${field("igCap", "Caption", c.instagram?.caption, 2200, 7)}
+    ${field("igTags", "Hashtags (max 5)", tags(c.instagram?.hashtags))}
+    <h3 style="font-size:22px;margin-top:16px">X</h3>
+    ${field("xPost", "Post", c.x?.post, 280, 3)}
+    <h3 style="font-size:22px;margin-top:16px">LinkedIn</h3>
+    ${field("liPost", "Post", c.linkedin?.post, 3000, 7)}
+    ${field("liTags", "Hashtags", tags(c.linkedin?.hashtags))}
+    <h3 style="font-size:22px;margin-top:16px">DM reply (keyword automation)</h3>
+    ${field("dm", "Message", c.dm_reply, 0, 8)}
+    <h3 style="font-size:22px;margin-top:16px">Thumbnail prompts</h3>
+    ${(c.thumbnails || []).map((t, i) => field("th" + i, `${esc(t.angle)} · sticker “${esc(t.sticker)}”`, t.prompt, 0, 3)).join("")}`;
+}
+async function saveCopy() {
+  const c = structuredClone(PROJ.copy), tg = id => $("#" + id).value.split(/\s+/).filter(Boolean);
+  c.youtube.title = $("#ytTitle").value; c.youtube.description = $("#ytDesc").value; c.youtube.hashtags = tg("ytTags");
+  c.instagram.caption = $("#igCap").value; c.instagram.hashtags = tg("igTags");
+  c.x.post = $("#xPost").value; c.linkedin.post = $("#liPost").value; c.linkedin.hashtags = tg("liTags"); c.dm_reply = $("#dm").value;
+  (c.thumbnails || []).forEach((t, i) => t.prompt = $("#th" + i).value);
+  PROJ = await api("PUT", `/api/projects/${DAY}/copy`, { copy: c }); render();
+}
+
+// ---------------- 5. export
+function tabExport() {
+  const p = PROJ, ready = p.files.final && p.copy;
+  const copyBad = (p.copyChecks || []).filter(x => !x.ok).length, chk = p.checks;
+  return `
+    ${p.voiceMode !== "recording" ? `<div class="note warn"><b>AI voice used.</b> When you post, switch on the AI / altered-content label: YouTube Studio → answer <b>Yes</b> to “Altered content”; Instagram → Advanced settings → AI label.</div>` : ""}
+    ${p.factsToCheck?.length ? `<div class="note warn" style="margin-top:10px"><b>Verify before posting:</b><ul style="margin:4px 0 0 18px;padding:0">${p.factsToCheck.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
+    <ul class="checks" style="margin-top:12px">
+      <li><span class="tag ${p.files.final ? "ok" : "error"}">${p.files.final ? "✓ ok" : "todo"}</span><div><b>Video rendered</b> ${chk ? `<span class="muted">${chk.errors} errors, ${chk.warns} warnings</span>` : ""}</div></li>
+      <li><span class="tag ${p.copy ? (copyBad ? "warn" : "ok") : "error"}">${p.copy ? (copyBad ? "warn" : "✓ ok") : "todo"}</span><div><b>Copy written</b> ${copyBad ? `<span class="muted">${copyBad} check(s) to fix</span>` : ""}</div></li>
+      <li><span class="tag ${p.status === "exported" ? "ok" : "warn"}">${p.status === "exported" ? "✓ ok" : "next"}</span><div><b>Exported to the Day folder</b> <span class="muted">${esc(p.folder)}</span></div></li>
+    </ul>
+    <div class="row" style="margin-top:14px"><button class="accent" onclick="run(['export'])" ${!ready || p.busy ? "disabled" : ""}>Export Day ${p.day}</button>
+      <button onclick="api('POST','/api/projects/${p.day}/open-folder')">Open folder</button></div>`;
+}
+
+// ---------------- settings, reference clip, calendar
+async function openSettings() {
+  await loadState();
+  const c = STATE.config;
+  $("#sVoiceMode").value = c.voice.mode; $("#sModel").value = c.voice.model; $("#sDevice").value = c.voice.device; $("#sTemp").value = String(c.voice.temperature ?? 0.8); $("#sPause").value = String(c.voice.maxPause ?? 0.45);
+  $("#sCaptions").checked = c.captions !== false;
+  skillRows();
+  $("#sProvider").value = c.llm.provider; $("#sApiModel").value = c.llm.apiModel || "";
+  $("#refStatus").innerHTML = STATE.setup.reference ? `✓ Reference clip saved: <span class="muted">${esc(STATE.setup.referencePath)}</span>` : "No reference clip yet.";
+  $("#refAudio").classList.toggle("hidden", !STATE.setup.reference); if (STATE.setup.reference) $("#refAudio").src = "/api/reference.wav?v=" + Date.now();
+  settings.showModal();
+}
+async function saveSettings() {
+  await api("PUT", "/api/settings", { voice: { mode: $("#sVoiceMode").value, model: $("#sModel").value, device: $("#sDevice").value, temperature: Number($("#sTemp").value), maxPause: Number($("#sPause").value) },
+    llm: { provider: $("#sProvider").value, apiModel: $("#sApiModel").value }, captions: $("#sCaptions").checked });
+  await loadState(); settings.close();
+}
+let refRec = null;
+async function toggleRef() {
+  if (refRec) { refRec.stop(); return; }
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } });
+  const ch = []; refRec = new MediaRecorder(stream);
+  refRec.ondataavailable = e => ch.push(e.data);
+  refRec.onstop = async () => { stream.getTracks().forEach(t => t.stop()); refRec = null; $("#recBtn").textContent = "● Record reference clip";
+    await uploadRef(new Blob(ch, { type: "audio/webm" }), "webm"); };
+  refRec.start(); $("#recBtn").textContent = "■ Stop (aim for 10 s)";
+}
+async function uploadRef(file, ext) {
+  if (!file) return;
+  const j = await api("POST", `/api/reference?ext=${ext || (file.name || "a.webm").split(".").pop()}`, file, true);
+  alert(`Reference clip saved (${j.seconds.toFixed(1)} s).${j.warning ? "\n" + j.warning : ""}`);
+  await loadState(); $("#refStatus").textContent = "✓ Reference clip saved."; $("#refAudio").classList.remove("hidden"); $("#refAudio").src = "/api/reference.wav?v=" + Date.now();
+}
+// ---------------- pages (sidebar): Reels and the content Calendar
+let PAGE = "reels";
+function go(page) {
+  PAGE = page === "calendar" ? "calendar" : "reels";
+  try { localStorage.setItem("rf.page", PAGE); } catch {}
+  $("#pageReels").classList.toggle("hidden", PAGE !== "reels"); $("#pageCal").classList.toggle("hidden", PAGE !== "calendar");
+  $("#navReels").classList.toggle("on", PAGE === "reels"); $("#navCal").classList.toggle("on", PAGE === "calendar");
+  if (PAGE === "calendar") renderCalPage();
+}
+
+// ---------------- content calendar: Day N falls on startDate + N - 1. Made reels sit on their Day (calendarId link),
+// a topic pinned to a day sits there, the other open topics fill the next free days in queue order.
+const CAL = { view: "month", month: null, saveT: 0 };
+const cal = () => STATE.calendar;
+const dayMs = 864e5, ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const parseYmd = s => { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, m - 1, d); };
+function startDate() { return cal().startDate || STATE.day1Date || ymd(new Date()); }
+const dateOfDay = n => new Date(parseYmd(startDate()).getTime() + (n - 1) * dayMs);
+const dayOfDate = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - parseYmd(startDate())) / dayMs) + 1;
+function schedule() {
+  const byDay = {}, topics = cal().topics || [], made = {};
+  for (const p of STATE.projects) if (p.calendarId) made[p.calendarId] = p.day;
+  for (const t of topics) { const d = made[t.id] || t.day; if (d && !byDay[d]) byDay[d] = t; }
+  let n = STATE.nextDay;
+  for (const t of topics) {
+    if (made[t.id] || t.day || t.status === "done") continue;
+    while (byDay[n] || STATE.projects.some(p => p.day === n)) n++;
+    byDay[n] = t; n++;
+  }
+  const dayOf = {}; for (const [d, t] of Object.entries(byDay)) dayOf[t.id] = +d;
+  return { byDay, dayOf, made };
+}
+function slotHint(n) { const s = cal().pattern?.slots || []; return s.length ? s[(n - 1 + s.length * 10) % s.length] : ""; }
+function saveCal(now) {
+  clearTimeout(CAL.saveT);
+  CAL.saveT = setTimeout(async () => { await api("PUT", "/api/calendar", { calendar: cal() }); const st = await api("GET", "/api/state"); STATE.nextTopic = st.nextTopic; $("#nextTopic").innerHTML = STATE.nextTopic ? `Next from calendar: <b>${esc(STATE.nextTopic.topic)}</b>` : "Calendar is empty: type a topic."; }, now ? 0 : 500);
+}
+function tickTopic(id, on) {
+  const t = cal().topics.find(x => x.id === id), { made } = schedule();
+  t.status = on ? "done" : made[id] ? "in progress" : "ready";
+  if (on) t.doneAt = new Date().toISOString(); else delete t.doneAt;
+  saveCal(true); renderCalPage();
+}
+function topicEdit(id, field, v) {
+  const t = cal().topics.find(x => x.id === id);
+  if (field === "day") { if (+v > 0) t.day = +v; else delete t.day; } else t[field] = v;
+  saveCal(); if (field === "day") renderCalPage();
+}
+function topicMove(id, dir) {
+  const a = cal().topics, i = a.findIndex(x => x.id === id), j = i + dir;
+  if (j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]]; saveCal(); renderCalPage();
+}
+function topicDelete(id) {
+  const t = cal().topics.find(x => x.id === id);
+  if (!confirm(`Delete "${t.topic || "this topic"}" from the calendar?`)) return;
+  cal().topics = cal().topics.filter(x => x.id !== id); saveCal(true); renderCalPage();
+}
+function topicAdd(day) {
+  const topic = prompt(day ? `Topic for Day ${day} (${dateOfDay(day).toDateString()}):` : "New topic:");
+  if (!topic || !topic.trim()) return;
+  cal().topics.push({ id: "t" + Date.now(), topic: topic.trim(), notes: "", status: "ready", ...(day ? { day } : {}) });
+  saveCal(true); renderCalPage();
+}
+function openDay(n) { go("reels"); select(n); }
+function calCell(d, inMonth) {
+  const n = dayOfDate(d), { byDay } = schedule(), t = n >= 1 ? byDay[n] : null, today = ymd(d) === ymd(new Date());
+  const proj = n >= 1 ? STATE.projects.find(p => p.day === n) : null, done = t?.status === "done";
+  return `<div class="cell ${inMonth ? "" : "out"} ${today ? "today" : ""} ${done ? "done" : ""}">
+    <div class="d"><span><b style="color:var(--ink)">${d.getDate()}</b>${n >= 1 ? ` · Day ${n}` : ""}</span>
+      ${t ? `<input type="checkbox" class="tick" ${done ? "checked" : ""} onchange="tickTopic('${t.id}', this.checked)" title="${done ? "Mark not done" : "Mark done"}">` : ""}</div>
+    ${t ? `<div class="t ${done ? "done" : ""}" title="${esc(t.notes || t.topic)}" onclick="${proj ? `openDay(${n})` : `CAL.view='list';renderCalPage()`}">${esc(t.topic)}</div>`
+      : proj && proj.status !== "manual" ? `<div class="t" onclick="openDay(${n})" title="A reel not from the calendar">${esc(proj.title)}</div>`
+      : n >= 1 && !proj ? `<a href="#" class="muted" style="font-size:12px" onclick="topicAdd(${n});return false">+ topic</a>` : ""}
+    ${proj ? `<span class="chip" style="align-self:flex-start;font-size:11px;${proj.status === "manual" ? "" : "cursor:pointer"}" ${proj.status === "manual" ? `title="made by hand, outside the app"` : `onclick="openDay(${n})"`}>${esc(proj.status === "manual" ? "made by hand" : proj.status)}</span>` : n >= 1 ? `<span class="slot">${esc(slotHint(n))}</span>` : ""}
+  </div>`;
+}
+function renderCalPage() {
+  const topics = cal().topics || [], { dayOf, made } = schedule(), doneN = topics.filter(t => t.status === "done").length;
+  if (!CAL.month) { const d = new Date(); CAL.month = new Date(d.getFullYear(), d.getMonth(), 1); }
+  const m = CAL.month, first = new Date(m.getFullYear(), m.getMonth(), 1), lead = (first.getDay() + 6) % 7;     // weeks start on Monday
+  const cells = []; for (let k = 0; k < 42; k++) cells.push(new Date(first.getFullYear(), first.getMonth(), 1 - lead + k));
+  const month = `<div class="month">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => `<div class="dow">${d}</div>`).join("")}
+    ${cells.map(d => calCell(d, d.getMonth() === m.getMonth())).join("")}</div>`;
+  const list = `<table><thead><tr><th style="width:34px">✓</th><th style="width:150px">Day</th><th>Topic</th><th>Notes</th><th style="width:110px">Status</th><th style="width:170px"></th></tr></thead><tbody>
+    ${topics.map((t, i) => { const n = dayOf[t.id], done = t.status === "done";
+      return `<tr class="${done ? "done" : ""}"><td><input type="checkbox" class="tick" ${done ? "checked" : ""} onchange="tickTopic('${t.id}', this.checked)"></td>
+        <td>${n ? `<b>Day ${n}</b><br><span class="muted" style="font-size:12px">${dateOfDay(n).toDateString().slice(0, 10)}</span>` : `<span class="muted">${done ? "done" : "—"}</span>`}
+          ${made[t.id] ? "" : `<br><input type="number" min="1" placeholder="pin day" value="${t.day || ""}" style="width:90px;font-size:12px;padding:2px 6px" onchange="topicEdit('${t.id}','day',this.value)">`}</td>
+        <td><input type="text" value="${esc(t.topic)}" onchange="topicEdit('${t.id}','topic',this.value)"></td>
+        <td><input type="text" value="${esc(t.notes || "")}" onchange="topicEdit('${t.id}','notes',this.value)"></td>
+        <td><span class="chip ${done ? "ok" : ""}">${esc(t.status)}</span></td>
+        <td><button class="small" onclick="topicMove('${t.id}',-1)" ${i ? "" : "disabled"} title="Earlier">↑</button><button class="small" onclick="topicMove('${t.id}',1)" ${i < topics.length - 1 ? "" : "disabled"} title="Later">↓</button>
+          ${made[t.id] ? `<button class="small" onclick="openDay(${made[t.id]})">Open</button>` : ""}<button class="small" onclick="topicDelete('${t.id}')" title="Delete">✕</button></td></tr>`; }).join("")}
+    </tbody></table>`;
+  $("#pageCal").innerHTML = `
+    <div class="row"><h2 style="font-size:34px">Content calendar</h2><span class="grow" style="flex:1"></span>
+      <span class="chip ok">${doneN} done</span><span class="chip">${topics.length - doneN} to go</span></div>
+    <div class="calbar">
+      <button class="small ${CAL.view === "month" ? "primary" : ""}" onclick="CAL.view='month';renderCalPage()">Month</button>
+      <button class="small ${CAL.view === "list" ? "primary" : ""}" onclick="CAL.view='list';renderCalPage()">List</button>
+      ${CAL.view === "month" ? `<button class="small" onclick="CAL.month=new Date(CAL.month.getFullYear(),CAL.month.getMonth()-1,1);renderCalPage()">◀</button>
+        <b style="min-width:150px;text-align:center">${m.toLocaleString("en-IN", { month: "long", year: "numeric" })}</b>
+        <button class="small" onclick="CAL.month=new Date(CAL.month.getFullYear(),CAL.month.getMonth()+1,1);renderCalPage()">▶</button>
+        <button class="small" onclick="CAL.month=null;renderCalPage()">Today</button>` : ""}
+      <span style="flex:1"></span>
+      <label style="margin:0">Day 1 was on</label><input type="date" value="${startDate()}" style="width:auto;font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:8px" onchange="cal().startDate=this.value;saveCal(true);renderCalPage()">
+      <button class="small accent" onclick="topicAdd()">+ Add topic</button></div>
+    <p class="muted" style="font-size:13px;margin:0 0 10px">Tick a topic when it's done (untick to undo). The daily run takes the first open topic. Made reels sit on their Day; pin a topic to a day in the list, the rest fill the next free days in order.</p>
+    ${CAL.view === "month" ? month : list}`;
+}
+
+// ---------------- master chat (💬): Claude Code with full access to the app (lib/chat.js, docs/CHATBOT.md)
+const CHAT = { open: false, last: 0, timer: 0, running: false };
+function chatToggle() {
+  CHAT.open = !CHAT.open; $("#chat").classList.toggle("hidden", !CHAT.open);
+  try { localStorage.setItem("rf.chat", CHAT.open ? "1" : ""); } catch {}
+  if (CHAT.open) { chatPoll(true); setTimeout(() => $("#chatIn").focus(), 50); }
+}
+function chatLink(s) { return esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>').replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>"); }
+function chatShow(v, full) {
+  const box = $("#chatMsgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  if (full) { box.innerHTML = v.messages.length ? "" : `<div class="muted" style="font-size:13px">I can do anything in Reel Factory: read or change scripts, run steps, add images, edit the calendar, change settings, even the app's code. I won't approve a script or spend on Gemini unless you tell me to.</div>`; }
+  for (const m of v.messages) box.insertAdjacentHTML("beforeend", `<div class="msg ${m.role === "err" ? "bot err" : m.role}">${m.role === "tool" ? "· " + esc(m.text) : chatLink(m.text)}</div>`);
+  if (v.messages.length) CHAT.last = v.last;
+  if (atEnd || full) box.scrollTop = box.scrollHeight;
+  CHAT.running = v.running;
+  $("#chatSendBtn").disabled = v.running; $("#chatStopBtn").classList.toggle("hidden", !v.running);
+  $("#chatBtn").classList.toggle("busy", v.running);
+  $("#chatRestart").classList.toggle("hidden", !v.codeEdited || v.running);
+  if (v.running) box.insertAdjacentHTML("beforeend", `<div class="msg tool" id="chatThinking"><span class="busy">working…</span></div>`);
+}
+async function chatPoll(full) {
+  clearTimeout(CHAT.timer);
+  const wasRunning = CHAT.running;
+  $("#chatThinking")?.remove();
+  const v = await api("GET", `/api/chat?since=${full ? 0 : CHAT.last}`).catch(() => null);
+  if (v) chatShow(v, full);
+  if (v?.running) CHAT.timer = setTimeout(() => chatPoll(false), 1000);
+  else if (wasRunning) { await loadState(); if (DAY != null) await refresh(); if (PAGE === "calendar") renderCalPage(); }   // the assistant may have changed anything
+}
+async function chatSend() {
+  const t = $("#chatIn").value.trim(); if (!t || CHAT.running) return;
+  $("#chatIn").value = "";
+  const v = await api("POST", "/api/chat", { message: t, day: PAGE === "reels" ? DAY : null, tab: TAB, page: PAGE, since: CHAT.last });
+  $("#chatThinking")?.remove(); chatShow(v, false); CHAT.timer = setTimeout(() => chatPoll(false), 800);
+}
+async function chatStop() { await api("POST", "/api/chat/stop"); chatPoll(false); }
+async function chatNew() { if (CHAT.running && !confirm("Stop the current answer and start a new chat?")) return; await api("POST", "/api/chat/new"); CHAT.last = 0; chatPoll(true); }
+async function chatRestart() {
+  if (!confirm("Restart the app to load the assistant's code changes? Running jobs are kept only if nothing is running.")) return;
+  await api("POST", "/api/restart", {});
+  $("#chatMsgs").insertAdjacentHTML("beforeend", `<div class="msg tool"><span class="busy">restarting the app…</span></div>`);
+  const wait = async () => { try { await fetch("/api/state"); location.reload(); } catch { setTimeout(wait, 1000); } };
+  setTimeout(wait, 2500);
+}
+
+
+loadState().then(() => {
+  const first = STATE.projects.find(p => p.status !== "manual"); if (first) select(first.day);
+  try { if (localStorage.getItem("rf.page") === "calendar") go("calendar"); if (localStorage.getItem("rf.chat")) chatToggle(); } catch {}
+  if (!CHAT.open) chatPoll(true);                     // shows the busy dot if the assistant is still working
+});
+</script>
+</body>
+</html>

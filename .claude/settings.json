@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(node *)", "PowerShell(node *)",
+      "Bash(npm *)", "PowerShell(npm *)", "Bash(npx playwright *)", "PowerShell(npx playwright *)",
+      "Bash(.venv/Scripts/python.exe *)", "PowerShell(.venv\\Scripts\\python.exe *)", "Bash(python *)", "PowerShell(python *)",
+      "Bash(ffmpeg *)", "PowerShell(ffmpeg *)", "Bash(ffprobe *)", "PowerShell(ffprobe *)",
+      "Bash(nvidia-smi *)", "PowerShell(nvidia-smi *)",
+      "Bash(git add *)", "Bash(git commit *)", "Bash(git status *)", "Bash(git diff *)", "Bash(git init)",
+      "PowerShell(git add *)", "PowerShell(git commit *)", "PowerShell(git status *)", "PowerShell(git diff *)", "PowerShell(git init)",
+      "WebSearch", "WebFetch"
+    ],
+    "deny": ["Read(./.env)", "Bash(git push *)", "PowerShell(git push *)"]
+  }
+}

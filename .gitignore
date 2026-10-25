@@ -1,0 +1,22 @@
+node_modules/
+.venv/
+__pycache__/
+*.log
+
+# Private: keys, settings, your voice and your own data
+.env
+config.json
+voice/*.wav
+data/calendar.json
+data/history.json
+data/last-daily-run.txt
+data/chat/
+.claude/settings.local.json
+
+# Made by the app
+days/
+vendor/
+
+# Personal working notes
+HANDOFF.md
+AUTO-EDIT-HANDOFF.md

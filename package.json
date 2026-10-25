@@ -1,0 +1,12 @@
+{
+  "name": "reel-factory",
+  "private": true,
+  "description": "Daily vertical tech reels: script by Claude, your cloned voice, frame-exact synced video, posting copy",
+  "scripts": {
+    "start": "node server.js",
+    "daily": "node run-daily.js"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

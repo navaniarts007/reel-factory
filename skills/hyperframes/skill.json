@@ -1,0 +1,22 @@
+{
+  "id": "hyperframes",
+  "name": "HyperFrames",
+  "by": "HeyGen",
+  "tagline": "HTML becomes motion graphics: editorial type, kinetic words, design presets.",
+  "repo": "https://github.com/heygen-com/hyperframes",
+  "licence": "Apache-2.0",
+  "looks": [
+    "hf-cobalt",
+    "hf-editorial",
+    "hf-poster"
+  ],
+  "camera": "cut",
+  "types": [],
+  "studio": {
+    "skillDirs": [
+      "skills"
+    ],
+    "entry": "Use the HyperFrames /faceless-explainer workflow: read skills/hyperframes/SKILL.md, then skills/faceless-explainer/SKILL.md."
+  },
+  "needs": []
+}
