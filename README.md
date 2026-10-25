@@ -121,14 +121,14 @@ downloads each one into `vendor/skills/` from its own repository, under its own 
 |---|---|---|
 | HyperFrames | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 |
 | OneTake | [feitangyuan/onetake](https://github.com/feitangyuan/onetake) | PolyForm Noncommercial: noncommercial use only |
-| Collage B-roll | [pyang5166/gbro-collage-broll](https://github.com/pyang5166/gbro-collage-broll) | see its repository |
+| Collage B-roll | [pyang5166/gbro-collage-broll](https://github.com/pyang5166/gbro-collage-broll) | MIT |
 | Claude Animation Base (Clawd) | [JohnHeibel/ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) | MIT |
 | Lemo Opuscar | [lemomo-ai/lemo-opuscar](https://github.com/lemomo-ai/lemo-opuscar) | MIT |
 
 The native looks in `kit/` are this project's own code. The OneTake camera in `kit/engine.js` is a fresh implementation
 and copies no OneTake code. "Studio films" (an agent building a whole film with a skill's own tools) run the skill's
 code, so its licence applies to that film. Clawd is drawn by the MIT Claude Animation Base kit; Reel Factory isn't
-made or endorsed by Anthropic.
+made or endorsed by Anthropic. Credits and licence details: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## AI models used
 
@@ -183,4 +183,4 @@ Day N/                 (next to reel-factory)
 
 ## License
 
-[MIT](LICENSE) for this project's code. Downloaded skills, models and libraries keep their own licences.
+[MIT](LICENSE) for this project's code. Downloaded skills, models and libraries keep their own licences: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
