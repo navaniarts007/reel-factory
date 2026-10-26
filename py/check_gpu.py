@@ -9,9 +9,9 @@ if not torch.cuda.is_available():
     sys.exit(0)
 name = torch.cuda.get_device_name(0); total = torch.cuda.get_device_properties(0).total_memory / 2**30
 print(f"GPU: {name}, {total:.1f} GB")
-from chatterbox.tts_turbo import ChatterboxTurboTTS
+import lowmem                                      # the same loader the voice step uses (little RAM needed)
 t = time.time()
-m = ChatterboxTurboTTS.from_pretrained(device="cuda")
+m = lowmem.load_turbo("cuda")
 print(f"Chatterbox Turbo loaded in {time.time() - t:.0f} s; GPU memory in use: {torch.cuda.memory_allocated() / 2**30:.2f} GB")
 if m.conds is not None:
     t = time.time(); wav = m.generate("Hello guys! Day one of my three sixty five day tech challenge."); dur = wav.shape[-1] / m.sr

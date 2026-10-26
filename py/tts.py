@@ -74,7 +74,13 @@ class Engine:
             print("! CUDA not available, using CPU"); device = "cpu"
         if model == "nano":                       # chatterbox-tts 0.1.7 ships Turbo only
             print("! Nano isn't in this Chatterbox version, using Turbo")
-        self.m = ChatterboxTurboTTS.from_pretrained(device=device)
+        try:                                      # builds on the GPU and reads weights piece by piece: needs little RAM
+            import lowmem
+            self.m = lowmem.load_turbo(device)
+        except Exception as e:
+            if "1455" in str(e) or "paging file" in str(e): raise
+            print(f"! low-memory loader failed ({e}), using Chatterbox's own loader")
+            self.m = ChatterboxTurboTTS.from_pretrained(device=device)
         self.m.prepare_conditionals(str(ref))          # read the reference clip once, not for every scene
         self.sr = self.m.sr
         self.torch = torch
