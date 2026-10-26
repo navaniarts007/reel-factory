@@ -100,7 +100,12 @@ const server = http.createServer(async (req, res) => {
       const busy = P.listProjects(cfg).some(x => P.isBusy(x.day)) || CHAT.running();
       if (busy && !(await body(req)).force) return send(res, 409, { error: "A job or the chat is still running. Wait for it, or stop it first." });
       CHAT.codeRestarted();
-      const starter = `setTimeout(() => require("child_process").spawn(process.execPath, ["server.js", "--no-open"], { cwd: ${JSON.stringify(__dirname)}, detached: true, stdio: "ignore", windowsHide: true }).unref(), 1500)`;
+      // On Windows the new server gets its own minimized console window (like start.bat): without a console, every
+      // ffmpeg, git or python it starts would flash a window of its own.
+      const run = process.platform === "win32"
+        ? `spawn("cmd.exe", ["/c", "start", "Reel Factory", "/min", process.execPath, "server.js", "--no-open"], { cwd: ${JSON.stringify(__dirname)}, detached: true, stdio: "ignore", windowsHide: true })`
+        : `spawn(process.execPath, ["server.js", "--no-open"], { cwd: ${JSON.stringify(__dirname)}, detached: true, stdio: "ignore" })`;
+      const starter = `const { spawn } = require("child_process"); setTimeout(() => ${run}.unref(), 1500)`;
       require("child_process").spawn(process.execPath, ["-e", starter], { detached: true, stdio: "ignore", windowsHide: true }).unref();
       send(res, 200, { ok: true });
       setTimeout(() => process.exit(0), 300);
@@ -133,6 +138,7 @@ const server = http.createServer(async (req, res) => {
       try {
         if (req.method === "POST" && parts[3] === "renumber") return send(res, 200, CAL.renumber(cfg, day, b.to));
         if (req.method === "PUT" && !parts[3]) return send(res, 200, { topic: CAL.setDay(cfg, day, { title: b.title, postedAt: b.postedAt }) });
+        if (req.method === "DELETE" && !parts[3]) return send(res, 200, CAL.removeDay(cfg, day));
       } catch (e) { return send(res, 400, { error: e.message }); }
     }
     if (parts[1] === "projects" && parts[2]) {
@@ -294,7 +300,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === "POST" && action === "open-folder") {
         const dir = P.dayDir(cfg, day);
-        if (process.platform === "win32") execFile("explorer.exe", [dir]);
+        if (process.platform === "win32") execFile("explorer.exe", [dir], { windowsHide: true });
         return send(res, 200, { ok: true, dir });
       }
     }
@@ -319,5 +325,5 @@ server.requestTimeout = 0;                   // big video uploads + re-encoding 
 server.listen(cfg.port, "127.0.0.1", () => {
   console.log(`Reel Factory is running: http://localhost:${cfg.port}`);
   console.log(`Day folders: ${cfg.daysRoot}`);
-  if (process.platform === "win32" && !process.argv.includes("--no-open")) execFile("cmd", ["/c", "start", "", `http://localhost:${cfg.port}`]);
+  if (process.platform === "win32" && !process.argv.includes("--no-open")) execFile("cmd", ["/c", "start", "", `http://localhost:${cfg.port}`], { windowsHide: true });
 });

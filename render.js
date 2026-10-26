@@ -14,7 +14,7 @@ fs.mkdirSync(SEG, { recursive: true });
 const FPS = +opt("--fps", 60);
 const read = f => fs.readFileSync(path.join(KIT, f), "utf8");
 const sha = s => crypto.createHash("sha1").update(s).digest("hex").slice(0, 12);
-const ff = (...a) => execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...a], { stdio: "inherit" });
+const ff = (...a) => execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...a], { stdio: "inherit", windowsHide: true });
 const PY = process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
 
 // ---------- 1. the page ----------
@@ -189,7 +189,7 @@ if (has("--preview-only")) process.exit(0);
   const audio = [];
   if (!has("--no-sfx")) {
     const chimes = info.starts.filter((_, i) => ["hello", "bye"].includes(info.types[i])).map(s => (s + 0.3).toFixed(2));
-    execFileSync(PY, [path.join(KIT, "sfx.py"), silent, sfx, info.starts.map(s => s.toFixed(3)).join(","), chimes.join(",") || "", path.join(OUT, "events.json")], { stdio: "inherit" });
+    execFileSync(PY, [path.join(KIT, "sfx.py"), silent, sfx, info.starts.map(s => s.toFixed(3)).join(","), chimes.join(",") || "", path.join(OUT, "events.json")], { stdio: "inherit", windowsHide: true });
     audio.push(sfx);
   }
   const voice = path.join(dir, "voice.wav");
