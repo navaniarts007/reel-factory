@@ -6,7 +6,21 @@
   "llm": {
     "provider": "claude-code",
     "claudeBin": "claude",
-    "apiModel": "claude-sonnet-5-5"
+    "apiModel": "claude-sonnet-5-5",
+    "fallback": null
+  },
+  "pages": {
+    "default": "Prompt Kinetic",
+    "list": [
+      {
+        "name": "Prompt Kinetic",
+        "alertEmail": ""
+      },
+      {
+        "name": "FACTS MEMO",
+        "alertEmail": ""
+      }
+    ]
   },
   "voice": {
     "mode": "clone",

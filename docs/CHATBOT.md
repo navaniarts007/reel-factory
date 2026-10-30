@@ -47,7 +47,7 @@ Create / write:
 - `PUT /api/days/N` `{title?, postedAt?}` — a Day's title (calendar and project together) and post date (marks it done).
 - `POST /api/days/N/renumber` `{to}` — Day N becomes Day M: renames the folder and exported files, updates script/copy
   text and the calendar. Ask the user first; a voiced reel then needs voice + render again.
-- `PUT /api/settings` `{voice?, llm?, captions?}`.
+- `PUT /api/settings` `{voice?, llm?, pages?, captions?}` (pages: `{default, list: [{name, alertEmail}]}`).
 - `PUT /api/projects/D/copy` `{copy}` — posting copy.
 - `PUT /api/projects/D/media` `{items}` — media notes/kinds/spots/start; items left out are deleted.
 - `POST /api/projects/D/media-link` `{url, note}` — add an image from a link.

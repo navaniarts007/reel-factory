@@ -20,3 +20,6 @@ vendor/
 # Personal working notes
 HANDOFF.md
 AUTO-EDIT-HANDOFF.md
+
+# shared agent memory (local; holds personal details)
+common-context.json

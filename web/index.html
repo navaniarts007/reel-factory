@@ -179,8 +179,17 @@
   <p class="muted" style="font-size:13.5px">The GitHub skills behind each video world, pulled into <code>vendor/skills</code>. Looks work without pulling; Studio films and Clawd's painter need the pulled repo.</p>
   <div id="skillRows"></div>
   <h3 style="font-size:22px;margin-top:18px">Script writer</h3>
-  <div class="row"><div style="flex:1"><label>Provider</label><select id="sProvider"><option value="claude-code">My Claude subscription (Claude Code)</option><option value="api">Anthropic API key (.env)</option></select></div>
+  <div class="row"><div style="flex:1"><label>Provider</label><select id="sProvider"><option value="claude-code">My Claude subscription (Claude Code)</option><option value="api">Anthropic API key (.env)</option><option value="meta-responses">Meta Responses API (.env)</option><option value="openai-compatible">OpenAI-compatible endpoint (.env)</option><option value="opencode">opencode (headless)</option><option value="muse">muse (headless)</option></select></div>
     <div style="flex:1"><label>API model (only for the API)</label><input id="sApiModel" type="text"></div></div>
+  <p class="muted" style="font-size:13px;margin:8px 0 0">Fallback: used only when the provider above fails (Claude's weekly limit, not signed in, a timeout). After a limit error Claude is skipped for 30 minutes, then tried again.</p>
+  <div class="row"><div style="flex:1"><label>Fallback</label><select id="sFbProvider"><option value="">None</option><option value="meta-responses">Meta Responses API: Muse (.env)</option><option value="openai-compatible">OpenAI-compatible endpoint (.env)</option><option value="api">Anthropic API key (.env)</option><option value="opencode">opencode (headless)</option><option value="muse">muse (headless)</option></select></div>
+    <div style="flex:1"><label>Fallback model</label><input id="sLlmModel" type="text" placeholder="muse-wonder-1.0"></div>
+    <div style="flex:1"><label>Base URL (Meta / custom)</label><input id="sBaseURL" type="text" placeholder="https://api.meta.ai/v1"></div>
+    <div style="flex:1"><label>Key name in .env</label><input id="sApiKeyEnv" type="text" placeholder="MODEL_API_KEY"></div></div>
+  <h3 style="font-size:22px;margin-top:18px">Pages</h3>
+  <p class="muted" style="font-size:13.5px">One alert email per Facebook page. Export-ready and run finished/failed mails go to the Day's page. Sending needs RESEND_API_KEY in .env.</p>
+  <div id="pageRows"></div>
+  <div class="row" style="margin-top:6px"><button class="small" onclick="pageAdd()">+ Add page</button></div>
   <div class="row" style="margin-top:12px"><button class="primary" onclick="saveSettings()">Save settings</button></div>
   <p class="muted" style="font-size:13.5px;margin-top:18px">The content calendar has its own page now: 📅 Calendar in the sidebar.</p>
   <div class="hidden">
@@ -230,6 +239,13 @@ async function setSkill(id, look) {
   if (change && PROJ.timeline && confirm("New skill set: the look changes right away. Rewrite the script for this skill too (new words, approve again)?")) run(["script"]);
 }
 
+const LLM_NAMES = { "claude-code": "Claude Code", api: "Anthropic API", "meta-responses": "Muse", "muse-api": "Muse", "openai-compatible": "custom API", custom: "custom API", opencode: "opencode", muse: "muse CLI" };
+function scriptChip() {
+  const l = STATE.config.llm || {}, fb = l.fallback?.provider, st = STATE.llmStatus || {};
+  const main = LLM_NAMES[l.provider || "claude-code"] || l.provider, back = fb ? LLM_NAMES[fb] || fb : "";
+  if (st.primaryResting) return `<span class="chip bad" title="${esc(st.reason || "")}">Script: ${esc(back)} (${esc(main)} resting until ${new Date(st.primaryDownUntil).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })})</span>`;
+  return `<span class="chip" title="${back ? `${esc(back)} is used only if ${esc(main)} fails` : ""}">Script: ${esc(main)}${back ? ` · fallback ${esc(back)}` : ""}</span>`;
+}
 async function loadState() {
   STATE = await api("GET", "/api/state");
   $("#nextDay").textContent = STATE.nextDay;
@@ -238,7 +254,7 @@ async function loadState() {
   $("#newSkillInfo").innerHTML = skillInfo($("#newSkill").value);
   $("#nextTopic").innerHTML = STATE.nextTopic ? `Next from calendar: <b>${esc(STATE.nextTopic.topic)}</b>` : "Calendar is empty: type a topic.";
   $("#chips").innerHTML = `<span class="chip ${STATE.setup.reference ? "ok" : "bad"}">${STATE.setup.reference ? "✓ Voice reference" : "✗ Record voice reference"}</span>
-    <span class="chip">Script: ${STATE.config.llm.provider === "api" ? "API key" : "Claude Code"}</span>
+    ${scriptChip()}
     <span class="chip">Voice: ${esc(STATE.config.voice.model)} · ${esc(STATE.config.voice.device)}</span>`;
   $("#days").innerHTML = STATE.projects.map(p => { const t = STATE.calendar.topics.find(x => x.day === p.day);
     return `<div class="day ${p.day === DAY ? "sel" : ""}" onclick="${p.status === "manual" ? `topicOpen({day:${p.day}})` : `select(${p.day})`}">
@@ -786,14 +802,30 @@ async function openSettings() {
   $("#sCaptions").checked = c.captions !== false;
   skillRows();
   $("#sProvider").value = c.llm.provider; $("#sApiModel").value = c.llm.apiModel || "";
+  const fb = c.llm.fallback || {};
+  $("#sFbProvider").value = fb.provider || ""; $("#sLlmModel").value = fb.model || ""; $("#sBaseURL").value = fb.baseURL || ""; $("#sApiKeyEnv").value = fb.apiKeyEnv || "";
+  pageRows();
   $("#refStatus").innerHTML = STATE.setup.reference ? `✓ Reference clip saved: <span class="muted">${esc(STATE.setup.referencePath)}</span>` : "No reference clip yet.";
   $("#refAudio").classList.toggle("hidden", !STATE.setup.reference); if (STATE.setup.reference) $("#refAudio").src = "/api/reference.wav?v=" + Date.now();
   settings.showModal();
 }
 async function saveSettings() {
   await api("PUT", "/api/settings", { voice: { mode: $("#sVoiceMode").value, model: $("#sModel").value, device: $("#sDevice").value, temperature: Number($("#sTemp").value), maxPause: Number($("#sPause").value) },
-    llm: { provider: $("#sProvider").value, apiModel: $("#sApiModel").value }, captions: $("#sCaptions").checked });
+    llm: { provider: $("#sProvider").value, apiModel: $("#sApiModel").value,
+      fallback: $("#sFbProvider").value ? { provider: $("#sFbProvider").value, model: $("#sLlmModel").value, baseURL: $("#sBaseURL").value, apiKeyEnv: $("#sApiKeyEnv").value, apiModel: $("#sApiModel").value } : null }, pages: collectPages(), captions: $("#sCaptions").checked });
   await loadState(); settings.close();
+}
+function pageRows() {
+  const ps = STATE.config.pages || { default: "", list: [] };
+  $("#pageRows").innerHTML = (ps.list || []).map((p, i) => `<div class="row"><label style="flex:0 0 90px"><input type="radio" name="pageDef" value="${esc(p.name)}" ${p.name === ps.default ? "checked" : ""}> default</label><div style="flex:1"><label>Page name</label><input data-pg="name" type="text" value="${esc(p.name)}"></div><div style="flex:2"><label>Alert email</label><input data-pg="email" type="text" value="${esc(p.alertEmail || "")}"></div><button class="small" onclick="pageDel(${i})">✕</button></div>`).join("");
+}
+function pageAdd() { const ps = STATE.config.pages || (STATE.config.pages = { default: "", list: [] }); ps.list.push({ name: "", alertEmail: "" }); pageRows(); }
+function pageDel(i) { STATE.config.pages.list.splice(i, 1); pageRows(); }
+function collectPages() {
+  const names = [...document.querySelectorAll('#pageRows [data-pg="name"]')].map(e => e.value.trim());
+  const mails = [...document.querySelectorAll('#pageRows [data-pg="email"]')].map(e => e.value.trim());
+  const def = (document.querySelector('#pageRows input[name="pageDef"]:checked') || {}).value || names[0] || "";
+  return { default: def, list: names.map((n, i) => ({ name: n, alertEmail: mails[i] || "" })).filter(x => x.name) };
 }
 let refRec = null;
 async function toggleRef() {

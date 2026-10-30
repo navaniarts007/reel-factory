@@ -85,8 +85,8 @@ const server = http.createServer(async (req, res) => {
       const d1 = first && { createdAt: new Date(new Date(first.createdAt).getTime() - (first.day - 1) * 864e5).toISOString() };
       return send(res, 200, { projects: P.listProjects(cfg), nextDay: P.nextDay(cfg), nextTopic: P.nextFromCalendar(cfg), calendar: cal,
         day1Date: d1?.createdAt ? new Date(d1.createdAt).toLocaleDateString("en-CA") : null,
-        config: { llm: cfg.llm, voice: cfg.voice, captions: cfg.captions !== false, fps: cfg.fps, daysRoot: cfg.daysRoot, dailyRunAt: cfg.dailyRunAt }, setup: setupStatus(),
-        skills: S.list(), skillStatus: S.status().map(x => ({ ...x, pull: PULLS[x.id] || null })), lemoStyles: S.lemoStyles() });
+        config: { llm: cfg.llm, voice: cfg.voice, captions: cfg.captions !== false, fps: cfg.fps, daysRoot: cfg.daysRoot, dailyRunAt: cfg.dailyRunAt, pages: cfg.pages }, setup: setupStatus(),
+        skills: S.list(), skillStatus: S.status().map(x => ({ ...x, pull: PULLS[x.id] || null })), lemoStyles: S.lemoStyles(), llmStatus: require("./lib/llm").status() });
     }
     // ---- master chat (lib/chat.js): Claude Code with tools, acting on the app through this API
     if (parts[1] === "chat") {
