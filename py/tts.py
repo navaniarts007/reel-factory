@@ -78,7 +78,8 @@ class Engine:
             import lowmem
             self.m = lowmem.load_turbo(device)
         except Exception as e:
-            if "1455" in str(e) or "paging file" in str(e): raise
+            # out of memory: Chatterbox's own loader needs even more, so let the app's retry handle it
+            if re.search(r"1455|paging file|out of memory|not enough memory", str(e), re.I): raise
             print(f"! low-memory loader failed ({e}), using Chatterbox's own loader")
             self.m = ChatterboxTurboTTS.from_pretrained(device=device)
         self.m.prepare_conditionals(str(ref))          # read the reference clip once, not for every scene
