@@ -1,0 +1,40 @@
+name: Poster (cloud, hourly)
+
+# Posts due Reel Factory rows from Supabase post_queue (see poster/poster.js).
+# Only rows the owner approved (app: pick a version) + exported ever become "ready",
+# so nothing can post without approval. Manual run: Actions -> this workflow -> Run.
+on:
+  schedule:
+    - cron: "15 * * * *"   # hourly at :15 UTC; the worker itself checks the 19:00 IST slot via scheduled_for
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List due rows without posting"
+        type: boolean
+        default: true
+
+concurrency:
+  group: reel-factory-poster
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Post due reels
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          PERSONAL_IG_TOKEN: ${{ secrets.PERSONAL_IG_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_CHANNEL_ID: ${{ secrets.YT_CHANNEL_ID }}
+          POSTER_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: node poster/poster.js

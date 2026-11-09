@@ -4,6 +4,9 @@
 //   node cli.js new --calendar               same, with the next ready topic from the calendar
 //   node cli.js approve <day>                approve the script (do this only when the user says so)
 //   node cli.js run <day> [steps…]           run steps: voice sync render checks copy export (default: voice→copy)
+//   node cli.js bulk [n] ["topic"…]          make n Days (script→voice→sync→favourite previews; no final render, no posting)
+//   node cli.js pick <day> <versionId>       approve a gallery version for posting (next 19:00 IST slot)
+//   node cli.js queue                        show the posting schedule queue
 //   node cli.js skills [pull [id…]]          list the video skills, or pull/update their GitHub repos into vendor/skills
 // Don't run the same day from here while the app is also working on it.
 const path = require("path"), fs = require("fs");
@@ -47,6 +50,20 @@ function status(day) {
   } else if (cmd === "approve") {
     const p = P.load(cfg, +a[0]); Object.assign(p, { approved: true, approvedAt: new Date().toISOString(), status: "approved" }); P.save(cfg, p);
     console.log(`Day ${a[0]} approved.`);
+  } else if (cmd === "bulk") {
+    const B = require("./lib/bulk");
+    const n = /^\d+$/.test(a[0] || "") ? +a[0] : (cfg.bulk?.count || 8);
+    const topics = (/^\d+$/.test(a[0] || "") ? a.slice(1) : a).filter(Boolean);
+    await B.bulk(cfg, { count: n, topics });
+  } else if (cmd === "pick") {
+    const SC = require("./lib/schedule");
+    const e = SC.pick(cfg, +a[0], a[1]);
+    console.log(`Day ${e.day}: version ${e.versionId} approved for posting, scheduled ${e.scheduledFor}. Render + export it, then it is ready for the poster.`);
+  } else if (cmd === "queue") {
+    const SC = require("./lib/schedule");
+    const es = SC.list(cfg);
+    if (!es.length) console.log("posting queue is empty (pick a version first: node cli.js pick <day> <versionId>)");
+    es.forEach(e => console.log(`Day ${e.day}: ${e.status} · ${e.versionId} · ${e.scheduledFor}${e.videoFile ? " · " + e.videoFile : ""}`));
   } else if (cmd === "skills") {
     const S = require("./lib/skills");
     if (a[0] === "pull") for (const id of a.slice(1).length ? a.slice(1) : S.ORDER) await S.pull(id, l => console.log(l));
