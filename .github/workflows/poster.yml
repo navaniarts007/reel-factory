@@ -6,6 +6,7 @@ name: Poster (cloud, hourly)
 on:
   schedule:
     - cron: "15 * * * *"   # hourly at :15 UTC; the worker itself checks the 19:00 IST slot via scheduled_for
+    - cron: "32 13 * * *"  # 19:02 IST: just after the daily 19:00 slot, so the post goes within minutes, not up to an hour late
   workflow_dispatch:
     inputs:
       dry_run:

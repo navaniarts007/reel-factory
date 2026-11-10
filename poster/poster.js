@@ -78,12 +78,18 @@ async function postYouTube(row) {
   console.log(`due: ${due.length} row(s)`);
   for (const row of due) {
     if (E.POSTER_DRY_RUN) { console.log(`[dry] Day ${row.day}: ${row.title} @ ${row.scheduled_for}`); continue; }
+    const platforms = ["both", "insta", "youtube"].includes(row.platforms) ? row.platforms : "both";
     try {
       await patch(row.day, { status: "posting" });
-      const ig = await postInstagram(row);
-      const yt = await postYouTube(row).catch(e => { console.log(`Day ${row.day} YouTube failed (IG posted): ${e.message}`); return { yt_error: e.message }; });
-      await patch(row.day, { status: "posted", ...ig, ...(yt && !yt.yt_error ? yt : {}), error: yt?.yt_error || null });
-      console.log(`Day ${row.day} posted: IG ${ig.ig_permalink || ig.ig_id}${yt?.yt_url ? " · YT " + yt.yt_url : ""}`);
+      const out = {};
+      if (platforms !== "youtube") Object.assign(out, await postInstagram(row));       // throws: nothing marked posted
+      if (platforms !== "insta") {
+        const yt = await postYouTube(row).catch(e => { console.log(`Day ${row.day} YouTube failed: ${e.message}`); return { yt_error: e.message }; });
+        if (yt && !yt.yt_error) Object.assign(out, yt); else if (yt?.yt_error && platforms === "youtube") throw new Error(yt.yt_error);
+        else if (yt?.yt_error) out.error = yt.yt_error;
+      }
+      await patch(row.day, { status: "posted", ...out });
+      console.log(`Day ${row.day} posted (${platforms}): IG ${out.ig_permalink || out.ig_id || "-"} · YT ${out.yt_url || "-"}`);
     } catch (e) {
       await patch(row.day, { status: "failed", error: String(e.message).slice(0, 400) }).catch(() => {});
       console.log(`Day ${row.day} FAILED: ${e.message}`);
